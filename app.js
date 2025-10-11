@@ -16,6 +16,8 @@
     const [channelReady, setChannelReady] = useState(false);
     const [isCreatingOffer, setIsCreatingOffer] = useState(false);
     const [isCreatingAnswer, setIsCreatingAnswer] = useState(false);
+    const [isSignalingCollapsed, setIsSignalingCollapsed] = useState(false);
+    const [isChatMinimized, setIsChatMinimized] = useState(false);
 
     const pcRef = useRef(null);
     const channelRef = useRef(null);
@@ -237,6 +239,12 @@
     }, [messages]);
 
     useEffect(() => {
+      if (channelReady && !isSignalingCollapsed) {
+        setIsSignalingCollapsed(true);
+      }
+    }, [channelReady, isSignalingCollapsed]);
+
+    useEffect(() => {
       return () => {
         if (channelRef.current) {
           channelRef.current.close();
@@ -254,97 +262,122 @@
     };
 
     return (
-      React.createElement('main', null,
-        React.createElement('h1', null, 'Peer-to-Peer WebRTC Chat'),
-        React.createElement('section', { id: 'signaling' },
+      React.createElement(React.Fragment, null,
+        React.createElement('main', null,
+          React.createElement('section', { id: 'signaling', className: isSignalingCollapsed ? 'collapsed' : '' },
           React.createElement('header', null,
             React.createElement('h2', null, 'Manual Signaling'),
-            React.createElement('p', { className: 'status', id: 'status' }, status)
+            React.createElement('div', { className: 'header-right' },
+              React.createElement('p', { className: 'status', id: 'status' }, status),
+              React.createElement('button', {
+                className: 'toggle-collapse',
+                onClick: () => setIsSignalingCollapsed(!isSignalingCollapsed),
+                'aria-label': isSignalingCollapsed ? 'Expand signaling panel' : 'Collapse signaling panel',
+                'aria-expanded': !isSignalingCollapsed
+              }, React.createElement('span', { 'aria-hidden': 'true' }, isSignalingCollapsed ? '▼' : '▲'))
+            )
           ),
-          React.createElement('p', { className: 'warning' },
-            React.createElement('strong', null, 'Security notice:'),
-            'Sharing WebRTC signals reveals your network addresses. Only exchange offers with peers you trust.'
-          ),
-          React.createElement('p', { className: 'hint' },
-            'Step 1: One user clicks "Create Offer" and shares the generated signal below.', React.createElement('br'),
-            'Step 2: The other user pastes it in "Remote Signal", clicks "Apply Remote", then "Create Answer" and shares their response.', React.createElement('br'),
-            'Step 3: The first user pastes the answer into "Remote Signal" and applies it. Chat starts when the status says connected.'
-          ),
-          React.createElement('div', { className: 'controls' },
-            React.createElement('button', {
-              id: 'create-offer',
-              onClick: handleCreateOffer,
-              disabled: isCreatingOffer
-            }, isCreatingOffer ? 'Working...' : 'Create Offer'),
-            React.createElement('button', {
-              id: 'create-answer',
-              onClick: handleCreateAnswer,
-              disabled: isCreatingAnswer
-            }, isCreatingAnswer ? 'Working...' : 'Create Answer'),
-            React.createElement('button', {
-              id: 'apply-remote',
-              onClick: handleApplyRemote
-            }, 'Apply Remote')
-          ),
-          React.createElement('label', null,
-            React.createElement('strong', null, 'Local Signal (share this)'),
-            React.createElement('textarea', {
-              id: 'local-signal',
-              readOnly: true,
-              value: localSignal,
-              placeholder: 'Local SDP will appear here once ready.'
-            })
-          ),
-          React.createElement('label', null,
-            React.createElement('strong', null, 'Remote Signal (paste received JSON here)'),
-            React.createElement('textarea', {
-              id: 'remote-signal',
-              value: remoteSignal,
-              onChange: (event) => setRemoteSignal(event.target.value),
-              placeholder: 'Paste the JSON you received and click Apply Remote.'
-            })
+          !isSignalingCollapsed && React.createElement('div', { className: 'collapsible-content' },
+            React.createElement('p', { className: 'warning' },
+              React.createElement('strong', null, 'Security notice:'),
+              'Sharing WebRTC signals reveals your network addresses. Only exchange offers with peers you trust.'
+            ),
+            React.createElement('p', { className: 'hint' },
+              'Step 1: One user clicks "Create Offer" and shares the generated signal below.', React.createElement('br'),
+              'Step 2: The other user pastes it in "Remote Signal", clicks "Apply Remote", then "Create Answer" and shares their response.', React.createElement('br'),
+              'Step 3: The first user pastes the answer into "Remote Signal" and applies it. Chat starts when the status says connected.'
+            ),
+            React.createElement('div', { className: 'controls' },
+              React.createElement('button', {
+                id: 'create-offer',
+                onClick: handleCreateOffer,
+                disabled: isCreatingOffer
+              }, isCreatingOffer ? 'Working...' : 'Create Offer'),
+              React.createElement('button', {
+                id: 'create-answer',
+                onClick: handleCreateAnswer,
+                disabled: isCreatingAnswer
+              }, isCreatingAnswer ? 'Working...' : 'Create Answer'),
+              React.createElement('button', {
+                id: 'apply-remote',
+                onClick: handleApplyRemote
+              }, 'Apply Remote')
+            ),
+            React.createElement('label', null,
+              React.createElement('strong', null, 'Local Signal (share this)'),
+              React.createElement('textarea', {
+                id: 'local-signal',
+                readOnly: true,
+                value: localSignal,
+                placeholder: 'Local SDP will appear here once ready.'
+              })
+            ),
+            React.createElement('label', null,
+              React.createElement('strong', null, 'Remote Signal (paste received JSON here)'),
+              React.createElement('textarea', {
+                id: 'remote-signal',
+                value: remoteSignal,
+                onChange: (event) => setRemoteSignal(event.target.value),
+                placeholder: 'Paste the JSON you received and click Apply Remote.'
+              })
+            )
           )
         ),
-        React.createElement('section', { id: 'chat' },
-          React.createElement('header', null,
-            React.createElement('h2', null, 'Chat'),
-            React.createElement('p', { className: 'status', id: 'channel-status' }, channelStatus)
-          ),
-          React.createElement('div', {
-            id: 'messages',
-            'aria-live': 'polite',
-            ref: messagesContainerRef
-          }, messages.map((message) => (
-            React.createElement('div', {
-              key: message.id,
-              className: 'chat-line',
-              'data-role': message.role
-            },
-            React.createElement('strong', null, roleLabels[message.role] || 'Notice'),
-            React.createElement('span', null, message.text))
-          ))),
-          React.createElement('div', { className: 'chat-input' },
-            React.createElement('input', {
-              id: 'outgoing',
-              type: 'text',
-              placeholder: 'Type a message...',
-              autoComplete: 'off',
-              disabled: !channelReady,
-              value: inputText,
-              onChange: (event) => setInputText(event.target.value),
-              onKeyDown: (event) => {
-                if (event.key === 'Enter') {
-                  event.preventDefault();
-                  handleSend();
-                }
-              },
-              maxLength: MAX_MESSAGE_LENGTH
-            }),
-            React.createElement('button', {
-              id: 'send',
-              onClick: handleSend,
-              disabled: !channelReady || !inputText.trim()
-            }, 'Send')
+        React.createElement('div', {
+          id: 'floating-chat',
+          className: isChatMinimized ? 'minimized' : ''
+        },
+          React.createElement('section', { id: 'chat' },
+            React.createElement('header', null,
+              React.createElement('h2', null, 'Chat'),
+              React.createElement('div', { className: 'header-right' },
+                React.createElement('p', { className: 'status', id: 'channel-status' }, channelStatus),
+                React.createElement('button', {
+                  className: 'toggle-collapse',
+                  onClick: () => setIsChatMinimized(!isChatMinimized),
+                  'aria-label': isChatMinimized ? 'Expand chat' : 'Minimize chat',
+                  'aria-expanded': !isChatMinimized
+                }, React.createElement('span', { 'aria-hidden': 'true' }, isChatMinimized ? '▲' : '▼'))
+              )
+            ),
+            !isChatMinimized && React.createElement('div', { className: 'chat-content' },
+              React.createElement('div', {
+                id: 'messages',
+                'aria-live': 'polite',
+                ref: messagesContainerRef
+              }, messages.map((message) => (
+                React.createElement('div', {
+                  key: message.id,
+                  className: 'chat-line',
+                  'data-role': message.role
+                },
+                React.createElement('strong', null, roleLabels[message.role] || 'Notice'),
+                React.createElement('span', null, message.text))
+              ))),
+              React.createElement('div', { className: 'chat-input' },
+                React.createElement('input', {
+                  id: 'outgoing',
+                  type: 'text',
+                  placeholder: 'Type a message...',
+                  autoComplete: 'off',
+                  disabled: !channelReady,
+                  value: inputText,
+                  onChange: (event) => setInputText(event.target.value),
+                  onKeyDown: (event) => {
+                    if (event.key === 'Enter') {
+                      event.preventDefault();
+                      handleSend();
+                    }
+                  },
+                  maxLength: MAX_MESSAGE_LENGTH
+                }),
+                React.createElement('button', {
+                  id: 'send',
+                  onClick: handleSend,
+                  disabled: !channelReady || !inputText.trim()
+                }, 'Send')
+              )
+            )
           )
         )
       )
