@@ -105,6 +105,23 @@ textarea[readonly] {
   color: #bae6fd;
   font-weight: 500;
 }
+.warning {
+  padding: 1rem 1.25rem;
+  border-radius: 14px;
+  border: 1px solid rgba(248, 113, 113, 0.4);
+  background: rgba(248, 113, 113, 0.08);
+  font-size: 0.9rem;
+  line-height: 1.5;
+  color: #fecaca;
+}
+.warning strong {
+  display: block;
+  margin-bottom: 0.4rem;
+  font-size: 0.85rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #f87171;
+}
 #messages {
   display: grid;
   gap: 0.75rem;
@@ -124,11 +141,18 @@ textarea[readonly] {
   background: rgba(139, 92, 246, 0.18);
   margin-left: auto;
 }
+.chat-line[data-role="system"] {
+  background: rgba(248, 250, 252, 0.08);
+  border: 1px dashed rgba(148, 163, 184, 0.5);
+}
 .chat-line strong {
   font-size: 0.8rem;
   letter-spacing: 0.08em;
   text-transform: uppercase;
   color: rgba(248, 250, 252, 0.75);
+}
+.chat-line[data-role="system"] strong {
+  color: rgba(248, 250, 252, 0.6);
 }
 .chat-line span {
   font-size: 1rem;
