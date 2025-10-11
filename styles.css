@@ -13,6 +13,12 @@ body {
   padding: 1.5rem;
   box-sizing: border-box;
 }
+#root {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
 main {
   width: min(920px, 100%);
   display: grid;
