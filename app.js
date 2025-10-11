@@ -6,6 +6,12 @@
   const MAX_MESSAGES_PER_INTERVAL = 30;
   const MESSAGE_INTERVAL_MS = 5000;
 
+  const ROLE_LABELS = {
+    local: 'You',
+    remote: 'Peer',
+    system: 'Notice'
+  };
+
   function App() {
     const [status, setStatus] = useState('Waiting to connect...');
     const [channelStatus, setChannelStatus] = useState('Channel closed');
@@ -247,12 +253,6 @@
       };
     }, []);
 
-    const roleLabels = {
-      local: 'You',
-      remote: 'Peer',
-      system: 'Notice'
-    };
-
     return (
       React.createElement('main', null,
         React.createElement('h1', null, 'Peer-to-Peer WebRTC Chat'),
@@ -320,7 +320,7 @@
               className: 'chat-line',
               'data-role': message.role
             },
-            React.createElement('strong', null, roleLabels[message.role] || 'Notice'),
+            React.createElement('strong', null, ROLE_LABELS[message.role] || 'Notice'),
             React.createElement('span', null, message.text))
           ))),
           React.createElement('div', { className: 'chat-input' },
