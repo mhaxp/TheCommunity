@@ -1,0 +1,414 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Minimal P2P WebRTC Chat</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <style>
+    :root {
+      color-scheme: light dark;
+      font-family: system-ui, sans-serif;
+    }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background: linear-gradient(180deg, #0f172a, #1f2937);
+      color: #f8fafc;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 1.5rem;
+      box-sizing: border-box;
+    }
+    main {
+      width: min(920px, 100%);
+      display: grid;
+      gap: 1.5rem;
+      padding: 2rem;
+      border-radius: 18px;
+      background: rgba(15, 23, 42, 0.85);
+      backdrop-filter: blur(18px);
+      box-shadow: 0 30px 80px rgba(15, 23, 42, 0.65);
+    }
+    h1 {
+      margin: 0;
+      font-size: clamp(1.8rem, 2.5vw, 2.6rem);
+      text-align: center;
+      letter-spacing: 0.05em;
+    }
+    section {
+      background: rgba(15, 18, 31, 0.6);
+      padding: 1.5rem;
+      border-radius: 16px;
+      border: 1px solid rgba(148, 163, 184, 0.25);
+      display: grid;
+      gap: 1.2rem;
+    }
+    section header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 1rem;
+    }
+    section header h2 {
+      margin: 0;
+      font-size: 1.1rem;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      color: #38bdf8;
+    }
+    button {
+      appearance: none;
+      border: none;
+      border-radius: 999px;
+      padding: 0.8rem 1.6rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      cursor: pointer;
+      background: linear-gradient(135deg, #0ea5e9, #8b5cf6);
+      color: #f0f9ff;
+      transition: transform 0.15s ease, filter 0.15s ease;
+      box-shadow: 0 18px 30px rgba(14, 165, 233, 0.3);
+    }
+    button:disabled {
+      background: rgba(148, 163, 184, 0.3);
+      color: rgba(148, 163, 184, 0.9);
+      cursor: not-allowed;
+      box-shadow: none;
+    }
+    button:not(:disabled):active,
+    button:not(:disabled):focus-visible {
+      transform: translateY(1px);
+      filter: brightness(0.95);
+    }
+    textarea {
+      width: 100%;
+      box-sizing: border-box;
+      padding: 1rem 1.1rem;
+      border-radius: 14px;
+      border: 1px solid rgba(148, 163, 184, 0.35);
+      background: rgba(15, 23, 42, 0.75);
+      color: inherit;
+      font: 0.95rem/1.4 ui-monospace, SFMono-Regular, Consolas, "Liberation Mono", Menlo, monospace;
+      min-height: 110px;
+      resize: vertical;
+      white-space: pre-wrap;
+    }
+    textarea[readonly] {
+      background: rgba(15, 23, 42, 0.5);
+    }
+    .controls {
+      display: flex;
+      gap: 1rem;
+      flex-wrap: wrap;
+    }
+    .controls button {
+      flex: 1;
+      min-width: 180px;
+    }
+    .status {
+      font-size: 0.95rem;
+      color: #bae6fd;
+      font-weight: 500;
+    }
+    #messages {
+      display: grid;
+      gap: 0.75rem;
+      max-height: 260px;
+      overflow-y: auto;
+      padding-right: 0.5rem;
+    }
+    .chat-line {
+      display: flex;
+      flex-direction: column;
+      gap: 0.25rem;
+      padding: 0.75rem 1rem;
+      border-radius: 12px;
+      background: rgba(59, 130, 246, 0.18);
+    }
+    .chat-line[data-role="remote"] {
+      background: rgba(139, 92, 246, 0.18);
+      margin-left: auto;
+    }
+    .chat-line strong {
+      font-size: 0.8rem;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: rgba(248, 250, 252, 0.75);
+    }
+    .chat-line span {
+      font-size: 1rem;
+    }
+    .chat-input {
+      display: flex;
+      gap: 0.75rem;
+    }
+    .chat-input input {
+      flex: 1;
+      border-radius: 999px;
+      border: 1px solid rgba(148, 163, 184, 0.35);
+      padding: 0.9rem 1.2rem;
+      background: rgba(15, 23, 42, 0.7);
+      color: inherit;
+      font-size: 1rem;
+    }
+    .hint {
+      font-size: 0.85rem;
+      color: rgba(226, 232, 240, 0.7);
+      line-height: 1.4;
+    }
+    @media (max-width: 768px) {
+      body {
+        padding: 1rem;
+      }
+      main {
+        padding: 1.5rem;
+      }
+      .controls button {
+        flex: 1 1 100%;
+      }
+      .chat-input {
+        flex-direction: column;
+      }
+      .chat-input input,
+      .chat-input button {
+        width: 100%;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>Peer-to-Peer WebRTC Chat</h1>
+    <section id="signaling">
+      <header>
+        <h2>Manual Signaling</h2>
+        <p class="status" id="status">Waiting to connect…</p>
+      </header>
+      <p class="hint">
+        Step 1: One user clicks “Create Offer” and shares the generated signal below.<br>
+        Step 2: The other user pastes it in “Remote Signal”, clicks “Apply Remote”, then “Create Answer” and shares their response.<br>
+        Step 3: The first user pastes the answer into “Remote Signal” and applies it. Chat starts when the status says connected.
+      </p>
+      <div class="controls">
+        <button id="create-offer">Create Offer</button>
+        <button id="create-answer">Create Answer</button>
+        <button id="apply-remote">Apply Remote</button>
+      </div>
+      <label>
+        <strong>Local Signal (share this)</strong>
+        <textarea id="local-signal" readonly placeholder="Local SDP will appear here once ready."></textarea>
+      </label>
+      <label>
+        <strong>Remote Signal (paste received JSON here)</strong>
+        <textarea id="remote-signal" placeholder="Paste the JSON you received and click Apply Remote."></textarea>
+      </label>
+    </section>
+    <section id="chat">
+      <header>
+        <h2>Chat</h2>
+        <p class="status" id="channel-status">Channel closed</p>
+      </header>
+      <div id="messages" aria-live="polite"></div>
+      <div class="chat-input">
+        <input id="outgoing" type="text" placeholder="Type a message…" autocomplete="off" disabled>
+        <button id="send" disabled>Send</button>
+      </div>
+    </section>
+  </main>
+  <script>
+    (() => {
+      const createOfferBtn = document.getElementById('create-offer');
+      const createAnswerBtn = document.getElementById('create-answer');
+      const applyRemoteBtn = document.getElementById('apply-remote');
+      const localText = document.getElementById('local-signal');
+      const remoteText = document.getElementById('remote-signal');
+      const statusText = document.getElementById('status');
+      const channelStatusText = document.getElementById('channel-status');
+      const messagesEl = document.getElementById('messages');
+      const sendBtn = document.getElementById('send');
+      const outgoingInput = document.getElementById('outgoing');
+
+      let pc;
+      let dataChannel;
+      let iceDone = false;
+
+      const ensurePeerConnection = () => {
+        if (pc) {
+          return pc;
+        }
+        pc = new RTCPeerConnection({
+          iceServers: []
+        });
+        pc.onicecandidate = (event) => {
+          if (!event.candidate && pc.localDescription) {
+            iceDone = true;
+            localText.value = JSON.stringify(pc.localDescription);
+            statusText.textContent = 'Signal ready to share';
+          }
+        };
+        pc.oniceconnectionstatechange = () => {
+          if (!pc) return;
+          statusText.textContent = `ICE: ${pc.iceConnectionState}`;
+        };
+        pc.onconnectionstatechange = () => {
+          if (!pc) return;
+          statusText.textContent = `Connection: ${pc.connectionState}`;
+        };
+        pc.ondatachannel = (event) => {
+          dataChannel = event.channel;
+          bindChannel();
+        };
+        return pc;
+      };
+
+      const bindChannel = () => {
+        if (!dataChannel) return;
+        dataChannel.onopen = () => {
+          channelStatusText.textContent = 'Channel open';
+          outgoingInput.disabled = false;
+          sendBtn.disabled = false;
+        };
+        dataChannel.onclose = () => {
+          channelStatusText.textContent = 'Channel closed';
+          outgoingInput.disabled = true;
+          sendBtn.disabled = true;
+        };
+        dataChannel.onmessage = (event) => {
+          appendMessage(event.data, 'remote');
+        };
+      };
+
+      const appendMessage = (text, role) => {
+        const wrapper = document.createElement('div');
+        wrapper.className = 'chat-line';
+        wrapper.dataset.role = role;
+        const author = document.createElement('strong');
+        author.textContent = role === 'local' ? 'You' : 'Peer';
+        const body = document.createElement('span');
+        body.textContent = text;
+        wrapper.append(author, body);
+        messagesEl.appendChild(wrapper);
+        messagesEl.scrollTop = messagesEl.scrollHeight;
+      };
+
+      const parseRemote = () => {
+        const raw = remoteText.value.trim();
+        if (!raw) {
+          throw new Error('Remote signal is empty.');
+        }
+        try {
+          const desc = JSON.parse(raw);
+          if (!desc.type || !desc.sdp) {
+            throw new Error();
+          }
+          return desc;
+        } catch (err) {
+          throw new Error('Signal must be the exact JSON from the other peer.');
+        }
+      };
+
+      const waitForIce = async () => {
+        if (iceDone) return;
+        await new Promise((resolve) => {
+          const check = () => {
+            if (iceDone) {
+              resolve();
+            } else {
+              setTimeout(check, 150);
+            }
+          };
+          check();
+        });
+      };
+
+      createOfferBtn.addEventListener('click', async () => {
+        ensurePeerConnection();
+        if (dataChannel) {
+          dataChannel.close();
+        }
+        dataChannel = pc.createDataChannel('chat');
+        bindChannel();
+        localText.value = '';
+        remoteText.value = '';
+        iceDone = false;
+        statusText.textContent = 'Creating offer…';
+        createOfferBtn.disabled = true;
+        try {
+          const offer = await pc.createOffer();
+          await pc.setLocalDescription(offer);
+          await waitForIce();
+        } catch (err) {
+          console.error(err);
+          statusText.textContent = 'Failed to create offer';
+        } finally {
+          createOfferBtn.disabled = false;
+        }
+      });
+
+      applyRemoteBtn.addEventListener('click', async () => {
+        ensurePeerConnection();
+        try {
+          const desc = parseRemote();
+          await pc.setRemoteDescription(desc);
+          statusText.textContent = `Remote ${desc.type} applied`;
+          if (desc.type === 'answer') {
+            channelStatusText.textContent = 'Answer applied, waiting for channel…';
+          }
+        } catch (err) {
+          console.error(err);
+          statusText.textContent = err.message;
+        }
+      });
+
+      createAnswerBtn.addEventListener('click', async () => {
+        ensurePeerConnection();
+        localText.value = '';
+        iceDone = false;
+        createAnswerBtn.disabled = true;
+        statusText.textContent = 'Creating answer…';
+        try {
+          if (!pc.currentRemoteDescription) {
+            const desc = parseRemote();
+            await pc.setRemoteDescription(desc);
+          }
+          const answer = await pc.createAnswer();
+          await pc.setLocalDescription(answer);
+          await waitForIce();
+        } catch (err) {
+          console.error(err);
+          statusText.textContent = 'Failed to create answer';
+        } finally {
+          createAnswerBtn.disabled = false;
+        }
+      });
+
+      sendBtn.addEventListener('click', () => {
+        const text = outgoingInput.value.trim();
+        if (!text || !dataChannel || dataChannel.readyState !== 'open') return;
+        dataChannel.send(text);
+        appendMessage(text, 'local');
+        outgoingInput.value = '';
+        outgoingInput.focus();
+      });
+
+      outgoingInput.addEventListener('keydown', (event) => {
+        if (event.key === 'Enter') {
+          event.preventDefault();
+          sendBtn.click();
+        }
+      });
+
+      window.addEventListener('beforeunload', () => {
+        if (dataChannel) {
+          dataChannel.close();
+        }
+        if (pc) {
+          pc.close();
+        }
+      });
+    })();
+  </script>
+</body>
+</html>
