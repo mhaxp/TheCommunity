@@ -319,6 +319,10 @@ textarea[readonly] {
   opacity: 0.7;
   line-height: 1.4;
 }
+.chat-counter {
+  text-align: right;
+  margin: 0.25rem 0 0;
+}
 .modal-overlay {
   position: fixed;
   top: 0;

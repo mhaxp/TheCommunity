@@ -656,7 +656,11 @@
               'aria-label': 'Send message',
               title: 'Send message'
             }, 'Send')
-          )
+          ),
+          React.createElement('p', {
+            className: 'hint chat-counter',
+            role: 'note'
+          }, `${inputText.length} / ${MAX_MESSAGE_LENGTH}`)
         )
       )
     );
