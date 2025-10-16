@@ -807,6 +807,24 @@
       }
     }, [appendSystemMessage, ensurePeerConnection, parseRemoteDescription, waitForIce]);
 
+    const sendControlMessage = useCallback((message) => {
+      if (!message || typeof message !== 'object') {
+        return false;
+      }
+      const channel = controlChannelRef.current;
+      if (!channel || channel.readyState !== 'open') {
+        return false;
+      }
+      try {
+        channel.send(JSON.stringify(message));
+        return true;
+      } catch (error) {
+        console.warn('Failed to send control message', error);
+        appendSystemMessageRef.current('Control message could not be delivered. Check your connection.');
+        return false;
+      }
+    }, []);
+
     const handleStopScreenShare = useCallback(() => {
       const stream = screenStreamRef.current;
       if (stream) {
@@ -912,24 +930,6 @@
         setIsScreenSharing(false);
       }
     }, [appendSystemMessage, ensurePeerConnection, handleStopScreenShare, isScreenSharing, shareSystemAudio]);
-
-    const sendControlMessage = useCallback((message) => {
-      if (!message || typeof message !== 'object') {
-        return false;
-      }
-      const channel = controlChannelRef.current;
-      if (!channel || channel.readyState !== 'open') {
-        return false;
-      }
-      try {
-        channel.send(JSON.stringify(message));
-        return true;
-      } catch (error) {
-        console.warn('Failed to send control message', error);
-        appendSystemMessageRef.current('Control message could not be delivered. Check your connection.');
-        return false;
-      }
-    }, []);
 
     const hideRemotePointer = useCallback(() => {
       if (remotePointerTimeoutRef.current) {
