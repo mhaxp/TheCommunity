@@ -63,12 +63,12 @@
       };
       channel.onmessage = (event) => {
         if (typeof event.data !== 'string') {
-          appendSystemMessage('Blocked non-text message from peer.');
+          appendSystemMessage('Security notice: blocked a message that was not plain text.');
           return;
         }
         const payload = event.data;
         if (payload.length > MAX_MESSAGE_LENGTH) {
-          appendSystemMessage('Blocked oversized message from peer.');
+          appendSystemMessage(`Message blocked: exceeded the ${MAX_MESSAGE_LENGTH} character limit.`);
           return;
         }
         const now = Date.now();
@@ -77,7 +77,7 @@
         );
         incomingTimestampsRef.current.push(now);
         if (incomingTimestampsRef.current.length > MAX_MESSAGES_PER_INTERVAL) {
-          appendSystemMessage('Peer is sending messages too quickly; message ignored.');
+          appendSystemMessage('Rate limit applied: peer is sending messages too quickly.');
           return;
         }
         appendMessage(payload, 'remote');
@@ -112,7 +112,7 @@
       pc.ondatachannel = (event) => {
         const incomingChannel = event.channel;
         if (incomingChannel.label !== EXPECTED_CHANNEL_LABEL) {
-          appendSystemMessage(`Blocked unexpected data channel "${incomingChannel.label || 'unnamed'}".`);
+          appendSystemMessage(`Security notice: blocked unexpected data channel "${incomingChannel.label || 'unnamed'}".`);
           incomingChannel.close();
           return;
         }
@@ -142,16 +142,16 @@
     const parseRemoteDescription = useCallback(() => {
       const raw = remoteSignal.trim();
       if (!raw) {
-        throw new Error('Remote signal is empty.');
+        throw new Error('Remote signal is empty. Paste the JSON you received from your peer.');
       }
       let desc;
       try {
         desc = JSON.parse(raw);
       } catch (err) {
-        throw new Error('Signal must be the exact JSON from the other peer.');
+        throw new Error('Remote signal is not valid JSON. Copy the complete signal again and retry.');
       }
       if (!desc.type || !desc.sdp || !['offer', 'answer'].includes(desc.type)) {
-        throw new Error('Unsupported remote description.');
+        throw new Error('Remote signal is missing required data. Ensure you pasted the offer or answer exactly as provided.');
       }
       return desc;
     }, [remoteSignal]);
@@ -181,7 +181,7 @@
       } catch (err) {
         console.error(err);
         setStatus('Failed to create offer');
-        appendSystemMessage('Unable to create offer. Check console for details.');
+        appendSystemMessage('Unable to create offer. WebRTC may be unsupported or browser permissions were denied.');
       } finally {
         setIsCreatingOffer(false);
       }
@@ -224,7 +224,7 @@
       } catch (err) {
         console.error(err);
         setStatus(err.message || 'Failed to create answer');
-        appendSystemMessage('Unable to create answer. Check console for details.');
+        appendSystemMessage('Unable to create answer. Apply a valid remote offer first and ensure WebRTC is available.');
       } finally {
         setIsCreatingAnswer(false);
       }
@@ -237,7 +237,7 @@
         return;
       }
       if (trimmed.length > MAX_MESSAGE_LENGTH) {
-        appendSystemMessage(`Message too long. Limit is ${MAX_MESSAGE_LENGTH} characters.`);
+        appendSystemMessage(`Message too long: limit is ${MAX_MESSAGE_LENGTH} characters (you typed ${trimmed.length}).`);
         return;
       }
       channel.send(trimmed);
