@@ -1,3 +1,7 @@
+/**
+ * Peer-to-peer WebRTC chat application bootstrap.
+ * Allows two browsers to exchange messages without a signaling server.
+ */
 (function () {
   const { useState, useRef, useCallback, useEffect } = React;
 
@@ -12,6 +16,10 @@
     system: 'Notice'
   };
 
+  /**
+   * Root React component that coordinates WebRTC setup and the user interface.
+   * @returns {React.ReactElement}
+   */
   function App() {
     const [status, setStatus] = useState('Waiting to connect...');
     const [channelStatus, setChannelStatus] = useState('Channel closed');
@@ -38,15 +46,29 @@
     const closeAboutButtonRef = useRef(null);
     const contributorsLoadedRef = useRef(false);
 
+    /**
+     * Queues a chat message for rendering.
+     * @param {string} text - Message body
+     * @param {'local'|'remote'|'system'} role - Message origin
+     */
     const appendMessage = useCallback((text, role) => {
       const id = messageIdRef.current++;
       setMessages((prev) => [...prev, { id, text, role }]);
     }, []);
 
+    /**
+     * Adds a system notification to the message list.
+     * @param {string} text - Notification text
+     */
     const appendSystemMessage = useCallback((text) => {
       appendMessage(text, 'system');
     }, [appendMessage]);
 
+    /**
+     * Configures event handlers on the reliable data channel.
+     * Applies defensive checks and rate limiting to inbound traffic.
+     * @param {RTCDataChannel} channel - Active data channel
+     */
     const setupChannelHandlers = useCallback((channel) => {
       channel.onopen = () => {
         setChannelStatus('Channel open');
@@ -84,6 +106,10 @@
       };
     }, [appendMessage, appendSystemMessage]);
 
+    /**
+     * Lazily creates (or returns) the RTCPeerConnection instance.
+     * @returns {RTCPeerConnection}
+     */
     const ensurePeerConnection = useCallback(() => {
       if (pcRef.current) {
         return pcRef.current;
@@ -123,6 +149,10 @@
       return pc;
     }, [appendSystemMessage, setupChannelHandlers]);
 
+    /**
+     * Resolves once ICE gathering finishes for the current connection.
+     * @returns {Promise<void>}
+     */
     const waitForIce = useCallback(async () => {
       if (iceDoneRef.current) {
         return;
@@ -139,6 +169,11 @@
       });
     }, []);
 
+    /**
+     * Validates and parses the remote offer/answer JSON pasted by the user.
+     * @returns {RTCSessionDescriptionInit}
+     * @throws {Error} When the payload is empty or malformed
+     */
     const parseRemoteDescription = useCallback(() => {
       const raw = remoteSignal.trim();
       if (!raw) {
@@ -156,6 +191,10 @@
       return desc;
     }, [remoteSignal]);
 
+    /**
+     * Generates a WebRTC offer and prepares it for manual sharing.
+     * @returns {Promise<void>}
+     */
     const handleCreateOffer = useCallback(async () => {
       const pc = ensurePeerConnection();
       if (channelRef.current) {
@@ -187,6 +226,10 @@
       }
     }, [appendSystemMessage, ensurePeerConnection, setupChannelHandlers, waitForIce]);
 
+    /**
+     * Applies the pasted remote offer or answer to the peer connection.
+     * @returns {Promise<void>}
+     */
     const handleApplyRemote = useCallback(async () => {
       const pc = ensurePeerConnection();
       try {
@@ -202,6 +245,10 @@
       }
     }, [ensurePeerConnection, parseRemoteDescription]);
 
+    /**
+     * Produces an answer for an applied offer and shares it with the peer.
+     * @returns {Promise<void>}
+     */
     const handleCreateAnswer = useCallback(async () => {
       const pc = ensurePeerConnection();
       iceDoneRef.current = false;
@@ -230,6 +277,9 @@
       }
     }, [appendSystemMessage, ensurePeerConnection, parseRemoteDescription, waitForIce]);
 
+    /**
+     * Sends the typed message across the data channel after validation.
+     */
     const handleSend = useCallback(() => {
       const channel = channelRef.current;
       const trimmed = inputText.trim();
