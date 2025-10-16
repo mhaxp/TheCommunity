@@ -1013,6 +1013,26 @@
       applyRemoteInputTransformRef.current = applyRemoteInputTransform;
     }, [applyRemoteInputTransform]);
 
+    /**
+     * Sends the typed message across the data channel after validation.
+     */
+    const handleSend = useCallback(() => {
+      const channel = channelRef.current;
+      const trimmed = inputText.trim();
+      if (!channel || channel.readyState !== 'open' || !trimmed) {
+        return;
+      }
+      if (trimmed.length > MAX_MESSAGE_LENGTH) {
+        appendSystemMessage(`Message too long: limit is ${MAX_MESSAGE_LENGTH} characters (you typed ${trimmed.length}).`);
+        return;
+      }
+      channel.send(trimmed);
+      appendMessage(trimmed, 'local');
+      setInputText('');
+      setAiStatus('');
+      setAiError('');
+    }, [appendMessage, appendSystemMessage, inputText]);
+
     const handleRemoteKeyboardInput = useCallback((message) => {
       if (!remoteControlAllowedRef.current) {
         return;
@@ -1107,26 +1127,6 @@
         appendSystemMessage('Remote control disabled for your shared screen.');
       }
     }, [appendSystemMessage, cancelPendingPointerFrame, controlChannelReady, isScreenSharing, sendControlMessage]);
-
-    /**
-     * Sends the typed message across the data channel after validation.
-     */
-    const handleSend = useCallback(() => {
-      const channel = channelRef.current;
-      const trimmed = inputText.trim();
-      if (!channel || channel.readyState !== 'open' || !trimmed) {
-        return;
-      }
-      if (trimmed.length > MAX_MESSAGE_LENGTH) {
-        appendSystemMessage(`Message too long: limit is ${MAX_MESSAGE_LENGTH} characters (you typed ${trimmed.length}).`);
-        return;
-      }
-      channel.send(trimmed);
-      appendMessage(trimmed, 'local');
-      setInputText('');
-      setAiStatus('');
-      setAiError('');
-    }, [appendMessage, appendSystemMessage, inputText]);
 
     const toggleSignalingCollapse = useCallback(() => {
       setIsSignalingCollapsed((prev) => !prev);
