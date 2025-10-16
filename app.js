@@ -322,6 +322,37 @@
       }
     }, [localSignal]);
 
+    /**
+     * Clears all messages from the chat history.
+     */
+    const handleClearMessages = useCallback(() => {
+      setMessages([]);
+      appendSystemMessage('Chat history cleared.');
+    }, [appendSystemMessage]);
+
+    /**
+     * Terminates the current peer connection and resets signaling state.
+     */
+    const handleDisconnect = useCallback(() => {
+      if (channelRef.current) {
+        channelRef.current.close();
+        channelRef.current = null;
+      }
+      if (pcRef.current) {
+        pcRef.current.close();
+        pcRef.current = null;
+      }
+      iceDoneRef.current = false;
+      incomingTimestampsRef.current = [];
+      setChannelReady(false);
+      setChannelStatus('Channel closed');
+      setStatus('Disconnected');
+      setLocalSignal('');
+      setRemoteSignal('');
+      setIsSignalingCollapsed(false);
+      appendSystemMessage('Connection closed. Create a new offer to reconnect.');
+    }, [appendSystemMessage]);
+
     useEffect(() => {
       if (!localSignal) {
         setCopyButtonText('Copy');
@@ -560,7 +591,13 @@
               React.createElement('button', {
                 id: 'apply-remote',
                 onClick: handleApplyRemote
-              }, 'Apply Remote')
+              }, 'Apply Remote'),
+              React.createElement('button', {
+                id: 'disconnect',
+                onClick: handleDisconnect,
+                disabled: !channelReady,
+                'aria-label': 'Disconnect from peer'
+              }, 'Disconnect')
             ),
             React.createElement('div', { className: 'signal-block' },
               React.createElement('div', { className: 'signal-heading' },
