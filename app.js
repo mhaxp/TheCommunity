@@ -600,8 +600,15 @@
         ),
         React.createElement('section', { id: 'chat' },
           React.createElement('header', null,
-            React.createElement('h2', null, 'Chat'),
-            React.createElement('p', { className: 'status', id: 'channel-status' }, channelStatus)
+            React.createElement('div', { className: 'header-content' },
+              React.createElement('h2', null, 'Chat'),
+              React.createElement('p', { className: 'status', id: 'channel-status' }, channelStatus)
+            ),
+            messages.length > 0 && React.createElement('button', {
+              onClick: handleClearMessages,
+              className: 'clear-chat-button',
+              'aria-label': 'Clear all chat messages'
+            }, 'Clear')
           ),
           React.createElement('div', {
             id: 'messages',

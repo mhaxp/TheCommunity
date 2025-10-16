@@ -210,6 +210,15 @@ textarea[readonly] {
   opacity: 0.6;
   cursor: not-allowed;
 }
+.clear-chat-button {
+  min-width: 90px;
+  padding: 0.45rem 1rem;
+  font-size: 0.85rem;
+}
+.clear-chat-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
 .status {
   font-size: 0.95rem;
   color: #ffffff;
