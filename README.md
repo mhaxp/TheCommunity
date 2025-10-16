@@ -28,7 +28,7 @@ TheCommunity is a community-driven project that demonstrates true peer-to-peer c
 ### 🎨 User Interface
 - **Collapsible Signaling Window** - Hide the technical signaling UI once connected
 - **Responsive Design** - Works seamlessly on desktop and mobile devices
-- **Modern Dark Theme** - Beautiful gradient background with glassmorphic design
+- **Light/Dark Theme Toggle** - One-click switch between palettes, remembered per browser and seeded from system preference
 - **Status Indicators** - Real-time connection status and channel state feedback
 - **Accessible** - ARIA labels and semantic HTML for better accessibility
 
@@ -90,6 +90,12 @@ Since there's no signaling server, users manually exchange WebRTC signals:
 2. Draft a message and click **Rewrite with AI** to request a refined version. The result replaces your local draft so you can review it before sending.
 3. Use **Update OpenAI Key** in the chat header any time to rotate or remove the key.
 4. Choose **Disable AI** or refresh the page to clear the key completely. You are responsible for any usage charges billed to your OpenAI account.
+
+### Theme Preferences
+
+- The initial theme matches your operating system preference when possible.
+- Use the **Light/Dark Mode** toggle in the chat header to switch palettes at any time.
+- Your choice is remembered locally; clear browser storage or toggle again to follow a different preference.
 
 ### WebRTC Architecture
 

@@ -10,6 +10,11 @@
   const MAX_MESSAGES_PER_INTERVAL = 30;
   const MESSAGE_INTERVAL_MS = 5000;
   const OPENAI_MODEL = 'gpt-4o-mini';
+  const THEME_STORAGE_KEY = 'thecommunity.theme-preference';
+  const THEME_OPTIONS = {
+    LIGHT: 'light',
+    DARK: 'dark'
+  };
 
   const ROLE_LABELS = {
     local: 'You',
@@ -18,10 +23,44 @@
   };
 
   /**
+   * Determines the initial theme, preferring stored settings, then system preference.
+   * @returns {{theme: 'light'|'dark', isStored: boolean}}
+   */
+  function resolveInitialTheme() {
+    if (typeof window === 'undefined') {
+      return { theme: THEME_OPTIONS.DARK, isStored: false };
+    }
+    try {
+      const storedTheme = window.localStorage.getItem(THEME_STORAGE_KEY);
+      if (storedTheme === THEME_OPTIONS.LIGHT || storedTheme === THEME_OPTIONS.DARK) {
+        if (typeof document !== 'undefined') {
+          document.documentElement.dataset.theme = storedTheme;
+        }
+        return { theme: storedTheme, isStored: true };
+      }
+    } catch (error) {
+      console.warn('Theme preference could not be read from storage.', error);
+    }
+    const prefersDark = typeof window.matchMedia === 'function'
+      && window.matchMedia('(prefers-color-scheme: dark)').matches;
+    const detectedTheme = prefersDark ? THEME_OPTIONS.DARK : THEME_OPTIONS.LIGHT;
+    if (typeof document !== 'undefined') {
+      document.documentElement.dataset.theme = detectedTheme;
+    }
+    return { theme: detectedTheme, isStored: false };
+  }
+
+  /**
    * Root React component that coordinates WebRTC setup and the user interface.
    * @returns {React.ReactElement}
    */
   function App() {
+    const initialThemeRef = useRef(null);
+    if (!initialThemeRef.current) {
+      initialThemeRef.current = resolveInitialTheme();
+    }
+    const [theme, setTheme] = useState(initialThemeRef.current.theme);
+    const hasStoredThemeRef = useRef(initialThemeRef.current.isStored);
     const [status, setStatus] = useState('Waiting to connect...');
     const [channelStatus, setChannelStatus] = useState('Channel closed');
     const [localSignal, setLocalSignal] = useState('');
@@ -74,6 +113,15 @@
     const appendSystemMessage = useCallback((text) => {
       appendMessage(text, 'system');
     }, [appendMessage]);
+
+    const handleToggleTheme = useCallback(() => {
+      setTheme((prevTheme) => {
+        const nextTheme = prevTheme === THEME_OPTIONS.DARK ? THEME_OPTIONS.LIGHT : THEME_OPTIONS.DARK;
+        appendSystemMessage(`Theme switched to ${nextTheme === THEME_OPTIONS.DARK ? 'dark' : 'light'} mode.`);
+        return nextTheme;
+      });
+      hasStoredThemeRef.current = true;
+    }, [appendSystemMessage]);
 
     const handleOpenApiKeyModal = useCallback(() => {
       setApiKeyInput(openAiKey);
@@ -493,6 +541,48 @@
     }, [appendSystemMessage, inputText, openAiKey, setIsAboutOpen]);
 
     useEffect(() => {
+      if (typeof document !== 'undefined') {
+        document.documentElement.dataset.theme = theme;
+      }
+      if (typeof window === 'undefined') {
+        return;
+      }
+      try {
+        if (hasStoredThemeRef.current) {
+          window.localStorage.setItem(THEME_STORAGE_KEY, theme);
+        } else {
+          window.localStorage.removeItem(THEME_STORAGE_KEY);
+        }
+      } catch (error) {
+        console.warn('Theme preference could not be saved.', error);
+      }
+    }, [theme]);
+
+    useEffect(() => {
+      if (typeof window === 'undefined' || hasStoredThemeRef.current) {
+        return undefined;
+      }
+      const media = window.matchMedia('(prefers-color-scheme: dark)');
+      const handleChange = (event) => {
+        if (hasStoredThemeRef.current) {
+          return;
+        }
+        const nextTheme = event.matches ? THEME_OPTIONS.DARK : THEME_OPTIONS.LIGHT;
+        setTheme((currentTheme) => (currentTheme === nextTheme ? currentTheme : nextTheme));
+      };
+      if (typeof media.addEventListener === 'function') {
+        media.addEventListener('change', handleChange);
+        return () => {
+          media.removeEventListener('change', handleChange);
+        };
+      }
+      media.addListener(handleChange);
+      return () => {
+        media.removeListener(handleChange);
+      };
+    }, [setTheme]);
+
+    useEffect(() => {
       if (!localSignal) {
         setCopyButtonText('Copy');
       }
@@ -665,6 +755,10 @@
         }
       };
     }, []);
+
+    const isDarkTheme = theme === THEME_OPTIONS.DARK;
+    const themeButtonLabel = isDarkTheme ? '🌙 Dark Mode' : '🌞 Light Mode';
+    const themeToggleTitle = isDarkTheme ? 'Switch to light theme' : 'Switch to dark theme';
 
     return (
       React.createElement(React.Fragment, null,
@@ -866,19 +960,29 @@
                 React.createElement('h2', null, 'Chat'),
                 React.createElement('p', { className: 'status', id: 'channel-status' }, channelStatus)
               ),
-              React.createElement('div', { className: 'header-actions' },
-                React.createElement('button', {
-                  type: 'button',
-                  className: 'api-key-button',
-                  onClick: handleOpenApiKeyModal,
-                  ref: apiKeyButtonRef,
-                  disabled: isApiKeyModalOpen
-                }, openAiKey ? 'Update OpenAI Key' : 'Add OpenAI Key'),
-                messages.length > 0 && React.createElement('button', {
-                  onClick: handleClearMessages,
-                  className: 'clear-chat-button',
-                  'aria-label': 'Clear all chat messages'
-                }, 'Clear')
+            React.createElement('div', { className: 'header-actions' },
+              React.createElement('button', {
+                type: 'button',
+                className: 'api-key-button',
+                onClick: handleOpenApiKeyModal,
+                ref: apiKeyButtonRef,
+                disabled: isApiKeyModalOpen
+              }, openAiKey ? 'Update OpenAI Key' : 'Add OpenAI Key'),
+              React.createElement('button', {
+                type: 'button',
+                className: 'theme-toggle-button',
+                onClick: handleToggleTheme,
+                'aria-pressed': isDarkTheme,
+                title: themeToggleTitle,
+                'aria-label': themeToggleTitle,
+                disabled: isApiKeyModalOpen
+              }, themeButtonLabel),
+              messages.length > 0 && React.createElement('button', {
+                onClick: handleClearMessages,
+                className: 'clear-chat-button',
+                'aria-label': 'Clear all chat messages',
+                disabled: isApiKeyModalOpen
+              }, 'Clear')
               )
             ),
             React.createElement('div', {
