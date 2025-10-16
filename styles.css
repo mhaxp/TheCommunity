@@ -218,6 +218,16 @@ textarea[readonly] {
   overflow-y: auto;
   padding-right: 0.5rem;
 }
+.empty-state {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 200px;
+  text-align: center;
+  color: rgba(255, 255, 255, 0.65);
+  font-style: italic;
+  padding: 2rem 1rem;
+}
 .chat-line {
   display: flex;
   flex-direction: column;
