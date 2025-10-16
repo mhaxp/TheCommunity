@@ -219,6 +219,80 @@ textarea[readonly] {
   opacity: 0.6;
   cursor: not-allowed;
 }
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+.header-actions > button {
+  flex: 0 0 auto;
+}
+.api-key-button {
+  min-width: 170px;
+}
+.ai-button {
+  min-width: 160px;
+  white-space: nowrap;
+}
+.modal-description {
+  font-size: 0.95rem;
+  line-height: 1.5;
+  margin: 0 0 0.75rem;
+  color: #e0e3eb;
+}
+.modal-label {
+  font-size: 0.8rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  font-weight: 600;
+}
+.api-key-form input {
+  margin-top: 0.5rem;
+  margin-bottom: 0.75rem;
+  padding: 0.9rem 1rem;
+  border-radius: 12px;
+  border: 1px solid #5f6368;
+  background: #111217;
+  color: inherit;
+  font-size: 1rem;
+  transition: border-color 200ms ease, background-color 200ms ease;
+}
+.api-key-form input:focus {
+  border-color: #8ab4f8;
+  outline: 2px solid #8ab4f8;
+  outline-offset: 2px;
+}
+.modal-error {
+  color: #ffb4b4;
+  font-size: 0.9rem;
+  margin: 0;
+}
+.modal-hint {
+  font-size: 0.85rem;
+  color: #ffffff;
+  opacity: 0.7;
+  margin-top: 0.25rem;
+}
+.modal-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin-top: 1.25rem;
+}
+.modal-actions button {
+  flex: 1 1 150px;
+}
+.ai-feedback {
+  margin-top: 0.4rem;
+  text-align: right;
+  opacity: 0.75;
+}
+.ai-feedback-error {
+  color: #ffb4b4;
+  opacity: 1;
+}
 .status {
   font-size: 0.95rem;
   color: #ffffff;
@@ -510,6 +584,20 @@ textarea[readonly] {
     padding: 0.85rem 1.1rem;
     font-size: 0.95rem;
   }
+  .header-actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .header-actions > button {
+    width: 100%;
+  }
+  .modal-actions {
+    flex-direction: column;
+  }
+  .modal-actions button {
+    width: 100%;
+    flex: 1 1 auto;
+  }
   .hint {
     font-size: 0.8rem;
   }
@@ -566,6 +654,20 @@ textarea[readonly] {
   .chat-input button {
     width: 100%;
     min-height: 44px;
+  }
+  .header-actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .header-actions > button {
+    width: 100%;
+  }
+  .modal-actions {
+    flex-direction: column;
+  }
+  .modal-actions button {
+    width: 100%;
+    flex: 1 1 auto;
   }
   .modal-header {
     padding: 1.25rem 1.5rem;

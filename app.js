@@ -9,6 +9,7 @@
   const MAX_MESSAGE_LENGTH = 2000;
   const MAX_MESSAGES_PER_INTERVAL = 30;
   const MESSAGE_INTERVAL_MS = 5000;
+  const OPENAI_MODEL = 'gpt-4o-mini';
 
   const ROLE_LABELS = {
     local: 'You',
@@ -36,6 +37,13 @@
     const [contributorsError, setContributorsError] = useState('');
     const [isLoadingContributors, setIsLoadingContributors] = useState(false);
     const [copyButtonText, setCopyButtonText] = useState('Copy');
+    const [openAiKey, setOpenAiKey] = useState('');
+    const [isApiKeyModalOpen, setIsApiKeyModalOpen] = useState(true);
+    const [apiKeyInput, setApiKeyInput] = useState('');
+    const [apiKeyError, setApiKeyError] = useState('');
+    const [isAiBusy, setIsAiBusy] = useState(false);
+    const [aiStatus, setAiStatus] = useState('');
+    const [aiError, setAiError] = useState('');
 
     const pcRef = useRef(null);
     const channelRef = useRef(null);
@@ -46,6 +54,8 @@
     const aboutButtonRef = useRef(null);
     const closeAboutButtonRef = useRef(null);
     const contributorsLoadedRef = useRef(false);
+    const apiKeyButtonRef = useRef(null);
+    const apiKeyInputRef = useRef(null);
 
     /**
      * Queues a chat message for rendering.
@@ -64,6 +74,50 @@
     const appendSystemMessage = useCallback((text) => {
       appendMessage(text, 'system');
     }, [appendMessage]);
+
+    const handleOpenApiKeyModal = useCallback(() => {
+      setApiKeyInput(openAiKey);
+      setApiKeyError('');
+      setIsApiKeyModalOpen(true);
+      setIsAboutOpen(false);
+    }, [openAiKey, setIsAboutOpen]);
+
+    const handleCloseApiKeyModal = useCallback(() => {
+      setIsApiKeyModalOpen(false);
+      setApiKeyError('');
+      setApiKeyInput('');
+    }, []);
+
+    const handleContinueWithoutAi = useCallback(() => {
+      handleCloseApiKeyModal();
+      setAiStatus('');
+      setAiError('');
+      appendSystemMessage('Continuing without AI assistance. You can add a key later from the Chat section.');
+    }, [appendSystemMessage, handleCloseApiKeyModal]);
+
+    const handleSaveApiKey = useCallback((event) => {
+      if (event && typeof event.preventDefault === 'function') {
+        event.preventDefault();
+      }
+      const trimmed = apiKeyInput.trim();
+      if (!trimmed) {
+        setApiKeyError('Provide an OpenAI API key to enable AI assistance.');
+        return;
+      }
+      setOpenAiKey(trimmed);
+      setAiStatus('OpenAI assistance ready. Review suggestions before sending.');
+      setAiError('');
+      appendSystemMessage('OpenAI API key stored only in this browser session. Refresh the page to clear it.');
+      handleCloseApiKeyModal();
+    }, [apiKeyInput, appendSystemMessage, handleCloseApiKeyModal]);
+
+    const handleDisableAi = useCallback(() => {
+      setOpenAiKey('');
+      setAiStatus('');
+      setAiError('');
+      appendSystemMessage('AI assistance disabled. Messages will be sent without AI help.');
+      handleCloseApiKeyModal();
+    }, [appendSystemMessage, handleCloseApiKeyModal]);
 
     /**
      * Configures event handlers on the reliable data channel.
@@ -294,6 +348,8 @@
       channel.send(trimmed);
       appendMessage(trimmed, 'local');
       setInputText('');
+      setAiStatus('');
+      setAiError('');
     }, [appendMessage, appendSystemMessage, inputText]);
 
     const toggleSignalingCollapse = useCallback(() => {
@@ -351,7 +407,90 @@
       setRemoteSignal('');
       setIsSignalingCollapsed(false);
       appendSystemMessage('Connection closed. Create a new offer to reconnect.');
+      setAiStatus('');
+      setAiError('');
     }, [appendSystemMessage]);
+
+    const handleAiRewrite = useCallback(async () => {
+      const draft = inputText.trim();
+      if (!draft) {
+        return;
+      }
+      if (!openAiKey) {
+        setApiKeyInput(openAiKey);
+        setApiKeyError('Add your OpenAI API key to enable AI rewriting.');
+        setIsApiKeyModalOpen(true);
+        setIsAboutOpen(false);
+        return;
+      }
+      if (draft.length > MAX_MESSAGE_LENGTH) {
+        appendSystemMessage(`AI rewrite not attempted: drafts must be under ${MAX_MESSAGE_LENGTH} characters.`);
+        return;
+      }
+      setIsAiBusy(true);
+      setAiStatus('Requesting AI rewrite...');
+      setAiError('');
+      try {
+        const response = await fetch('https://api.openai.com/v1/chat/completions', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${openAiKey}`
+          },
+          body: JSON.stringify({
+            model: OPENAI_MODEL,
+            messages: [
+              {
+                role: 'system',
+                content:
+                  'You rewrite chat drafts to stay concise, friendly, and clear. Preserve intent, remove sensitive data, and return only the revised message.'
+              },
+              {
+                role: 'user',
+                content: draft
+              }
+            ],
+            temperature: 0.7,
+            max_tokens: 256
+          })
+        });
+        if (!response.ok) {
+          if (response.status === 401 || response.status === 403) {
+            throw new Error('OpenAI rejected the request. Check that your API key is correct and has required access.');
+          }
+          throw new Error(`OpenAI request failed with status ${response.status}`);
+        }
+        const data = await response.json();
+        const aiText =
+          data &&
+          data.choices &&
+          data.choices[0] &&
+          data.choices[0].message &&
+          data.choices[0].message.content;
+        if (!aiText) {
+          throw new Error('OpenAI response missing content.');
+        }
+        const cleaned = aiText.trim();
+        if (!cleaned) {
+          throw new Error('OpenAI returned an empty suggestion.');
+        }
+        if (cleaned.length > MAX_MESSAGE_LENGTH) {
+          setInputText(cleaned.slice(0, MAX_MESSAGE_LENGTH));
+          appendSystemMessage('AI suggestion truncated to fit the message length limit.');
+        } else {
+          setInputText(cleaned);
+        }
+        setAiStatus('AI suggestion applied. Review and edit before sending.');
+        setAiError('');
+      } catch (error) {
+        console.error('AI rewrite failed', error);
+        setAiStatus('');
+        setAiError(error.message || 'OpenAI request failed.');
+        appendSystemMessage(`AI rewrite failed: ${error.message || 'request was rejected.'}`);
+      } finally {
+        setIsAiBusy(false);
+      }
+    }, [appendSystemMessage, inputText, openAiKey, setIsAboutOpen]);
 
     useEffect(() => {
       if (!localSignal) {
@@ -360,14 +499,48 @@
     }, [localSignal]);
 
     useEffect(() => {
+      if (!isApiKeyModalOpen) {
+        if (apiKeyButtonRef.current) {
+          apiKeyButtonRef.current.focus();
+        }
+        return;
+      }
+      const focusTimer = setTimeout(() => {
+        if (apiKeyInputRef.current) {
+          apiKeyInputRef.current.focus();
+          apiKeyInputRef.current.select();
+        }
+      }, 50);
+      return () => {
+        clearTimeout(focusTimer);
+      };
+    }, [isApiKeyModalOpen]);
+
+    useEffect(() => {
+      if (!isApiKeyModalOpen) {
+        return;
+      }
+      const handleKeyDown = (event) => {
+        if (event.key === 'Escape') {
+          event.preventDefault();
+          handleCloseApiKeyModal();
+        }
+      };
+      window.addEventListener('keydown', handleKeyDown);
+      return () => {
+        window.removeEventListener('keydown', handleKeyDown);
+      };
+    }, [handleCloseApiKeyModal, isApiKeyModalOpen]);
+
+    useEffect(() => {
       if (isAboutOpen) {
         if (closeAboutButtonRef.current) {
           closeAboutButtonRef.current.focus();
         }
-      } else if (aboutButtonRef.current) {
+      } else if (!isApiKeyModalOpen && aboutButtonRef.current) {
         aboutButtonRef.current.focus();
       }
-    }, [isAboutOpen]);
+    }, [isAboutOpen, isApiKeyModalOpen]);
 
     useEffect(() => {
       if (!isAboutOpen) {
@@ -494,210 +667,284 @@
     }, []);
 
     return (
-      React.createElement('main', null,
-        React.createElement('div', { className: 'header-with-about' },
-          React.createElement('h1', { className: 'app-title' },
-            React.createElement('span', {
-              className: 'app-title-icon',
-              'aria-hidden': 'true'
-            }, '🐬'),
-            React.createElement('span', { className: 'app-title-text' }, 'PodTalk')
-          ),
-          React.createElement('button', {
-            className: 'about-button',
-            onClick: toggleAbout,
-            'aria-label': 'About this project',
-            'aria-expanded': isAboutOpen,
-            'aria-controls': 'about-dialog',
-            ref: aboutButtonRef
-          }, 'About')
-        ),
-        isAboutOpen && React.createElement('div', { className: 'modal-overlay', role: 'presentation', onClick: toggleAbout },
+      React.createElement(React.Fragment, null,
+        isApiKeyModalOpen && React.createElement('div', { className: 'modal-overlay', role: 'presentation' },
           React.createElement('div', {
             className: 'modal-content',
             role: 'dialog',
-            id: 'about-dialog',
+            id: 'api-key-dialog',
             'aria-modal': 'true',
-            'aria-labelledby': 'about-dialog-title',
-            onClick: (e) => e.stopPropagation()
+            'aria-labelledby': 'api-key-dialog-title',
+            onClick: (event) => event.stopPropagation()
           },
             React.createElement('div', { className: 'modal-header' },
-              React.createElement('h2', { id: 'about-dialog-title' }, 'About TheCommunity'),
+              React.createElement('h2', { id: 'api-key-dialog-title' }, 'OpenAI Integration'),
               React.createElement('button', {
                 className: 'modal-close',
-                onClick: toggleAbout,
-                'aria-label': 'Close about dialog',
-                ref: closeAboutButtonRef
+                onClick: handleContinueWithoutAi,
+                'aria-label': 'Close API key dialog'
               }, 'Close')
             ),
-            React.createElement('div', { className: 'modal-body' },
-              React.createElement('p', null, 'This is a peer-to-peer WebRTC chat application with no backend. The community steers where this project goes through GitHub Issues.'),
-              React.createElement('h3', null, 'Contributors'),
-              React.createElement('p', { className: 'contributors-intro' }, 'Thank you to everyone who contributed by creating issues:'),
-              isLoadingContributors && React.createElement('p', { className: 'contributors-status' }, 'Loading contributors...'),
-              contributorsError && React.createElement('p', { className: 'contributors-status contributors-error' }, contributorsError),
-              !isLoadingContributors && !contributorsError && contributors.length === 0 &&
-                React.createElement('p', { className: 'contributors-status' }, 'No issues yet. Open one to join the credits.'),
-              contributors.length > 0 && React.createElement('ul', { className: 'contributors-list' },
-                contributors.map((contributor) => {
-                  const issueLabel = contributor.issueCount === 1 ? '1 issue' : `${contributor.issueCount} issues`;
-                  return React.createElement('li', { key: contributor.login },
-                    React.createElement('a', {
-                      href: contributor.htmlUrl,
-                      target: '_blank',
-                      rel: 'noopener noreferrer'
-                    }, `@${contributor.login}`),
-                    React.createElement('span', { className: 'contribution-note' }, ` - ${issueLabel}`)
-                  );
-                })
+            React.createElement('form', {
+              className: 'modal-body api-key-form',
+              onSubmit: handleSaveApiKey,
+              noValidate: true
+            },
+              React.createElement('p', { className: 'modal-description' },
+                'Provide your personal OpenAI API key to enable optional AI assistance. The key is stored only in memory and sent exclusively to api.openai.com during rewrite requests.'
+              ),
+              React.createElement('label', { className: 'modal-label', htmlFor: 'openai-api-key' }, 'OpenAI API key'),
+              React.createElement('input', {
+                id: 'openai-api-key',
+                type: 'password',
+                value: apiKeyInput,
+                onChange: (event) => setApiKeyInput(event.target.value),
+                ref: apiKeyInputRef,
+                placeholder: 'sk-...',
+                autoComplete: 'off',
+                'aria-describedby': apiKeyError ? 'api-key-error' : undefined
+              }),
+              apiKeyError && React.createElement('p', {
+                id: 'api-key-error',
+                className: 'modal-error',
+                role: 'alert'
+              }, apiKeyError),
+              React.createElement('p', { className: 'modal-hint' }, 'Never share API keys on untrusted devices. Refresh this page or disable AI to clear the key.'),
+              React.createElement('div', { className: 'modal-actions' },
+                React.createElement('button', { type: 'submit' }, 'Save key'),
+                React.createElement('button', { type: 'button', onClick: handleDisableAi }, 'Disable AI'),
+                React.createElement('button', { type: 'button', onClick: handleContinueWithoutAi }, 'Continue without AI')
               )
             )
           )
         ),
-        React.createElement('section', { id: 'signaling', className: isSignalingCollapsed ? 'collapsed' : '' },
-          React.createElement('header', null,
-            React.createElement('div', { className: 'header-content' },
-              React.createElement('h2', null, 'Manual Signaling'),
-              React.createElement('p', { className: 'status', id: 'status' }, status)
+        React.createElement('main', null,
+          React.createElement('div', { className: 'header-with-about' },
+            React.createElement('h1', { className: 'app-title' },
+              React.createElement('span', {
+                className: 'app-title-icon',
+                'aria-hidden': 'true'
+              }, '🐬'),
+              React.createElement('span', { className: 'app-title-text' }, 'PodTalk')
             ),
             React.createElement('button', {
-              className: 'collapse-toggle',
-              onClick: toggleSignalingCollapse,
-              'aria-label': isSignalingCollapsed ? 'Expand signaling' : 'Collapse signaling',
-              'aria-expanded': !isSignalingCollapsed
-            }, isSignalingCollapsed ? '▼' : '▲')
+              className: 'about-button',
+              onClick: toggleAbout,
+              'aria-label': 'About this project',
+              'aria-expanded': isAboutOpen,
+              'aria-controls': 'about-dialog',
+              ref: aboutButtonRef,
+              disabled: isApiKeyModalOpen
+            }, 'About')
           ),
-          !isSignalingCollapsed && React.createElement('div', { className: 'signaling-content' },
-            React.createElement('p', { className: 'warning' },
-              React.createElement('strong', null, 'Security notice:'),
-              'Sharing WebRTC signals reveals your network addresses. Only exchange offers with peers you trust.'
-            ),
-            React.createElement('p', { className: 'hint' },
-              'Step 1: One user clicks "Create Offer" and shares the generated signal below.', React.createElement('br'),
-              'Step 2: The other user pastes it in "Remote Signal", clicks "Apply Remote", then "Create Answer" and shares their response.', React.createElement('br'),
-              'Step 3: The first user pastes the answer into "Remote Signal" and applies it. Chat starts when the status says connected.'
-            ),
-            React.createElement('div', { className: 'controls' },
-              React.createElement('button', {
-                id: 'create-offer',
-                onClick: handleCreateOffer,
-                disabled: isCreatingOffer
-              }, isCreatingOffer ? 'Working...' : 'Create Offer'),
-              React.createElement('button', {
-                id: 'create-answer',
-                onClick: handleCreateAnswer,
-                disabled: isCreatingAnswer
-              }, isCreatingAnswer ? 'Working...' : 'Create Answer'),
-              React.createElement('button', {
-                id: 'apply-remote',
-                onClick: handleApplyRemote
-              }, 'Apply Remote'),
-              React.createElement('button', {
-                id: 'disconnect',
-                onClick: handleDisconnect,
-                disabled: !channelReady,
-                'aria-label': 'Disconnect from peer'
-              }, 'Disconnect')
-            ),
-            React.createElement('div', { className: 'signal-block' },
-              React.createElement('div', { className: 'signal-heading' },
-                React.createElement('label', { htmlFor: 'local-signal' },
-                  React.createElement('strong', null, 'Local Signal (share this)')
-                ),
+          isAboutOpen && React.createElement('div', { className: 'modal-overlay', role: 'presentation', onClick: toggleAbout },
+            React.createElement('div', {
+              className: 'modal-content',
+              role: 'dialog',
+              id: 'about-dialog',
+              'aria-modal': 'true',
+              'aria-labelledby': 'about-dialog-title',
+              onClick: (e) => e.stopPropagation()
+            },
+              React.createElement('div', { className: 'modal-header' },
+                React.createElement('h2', { id: 'about-dialog-title' }, 'About TheCommunity'),
                 React.createElement('button', {
-                  onClick: handleCopySignal,
-                  disabled: !localSignal,
-                  className: 'copy-signal-button',
-                  'aria-label': 'Copy local signal to clipboard'
-                }, copyButtonText)
+                  className: 'modal-close',
+                  onClick: toggleAbout,
+                  'aria-label': 'Close about dialog',
+                  ref: closeAboutButtonRef
+                }, 'Close')
               ),
-              React.createElement('textarea', {
-                id: 'local-signal',
-                readOnly: true,
-                value: localSignal,
-                placeholder: 'Local SDP will appear here once ready.'
-              })
+              React.createElement('div', { className: 'modal-body' },
+                React.createElement('p', null, 'This is a peer-to-peer WebRTC chat application with no backend. The community steers where this project goes through GitHub Issues.'),
+                React.createElement('h3', null, 'Contributors'),
+                React.createElement('p', { className: 'contributors-intro' }, 'Thank you to everyone who contributed by creating issues:'),
+                isLoadingContributors && React.createElement('p', { className: 'contributors-status' }, 'Loading contributors...'),
+                contributorsError && React.createElement('p', { className: 'contributors-status contributors-error' }, contributorsError),
+                !isLoadingContributors && !contributorsError && contributors.length === 0 &&
+                  React.createElement('p', { className: 'contributors-status' }, 'No issues yet. Open one to join the credits.'),
+                contributors.length > 0 && React.createElement('ul', { className: 'contributors-list' },
+                  contributors.map((contributor) => {
+                    const issueLabel = contributor.issueCount === 1 ? '1 issue' : `${contributor.issueCount} issues`;
+                    return React.createElement('li', { key: contributor.login },
+                      React.createElement('a', {
+                        href: contributor.htmlUrl,
+                        target: '_blank',
+                        rel: 'noopener noreferrer'
+                      }, `@${contributor.login}`),
+                      React.createElement('span', { className: 'contribution-note' }, ` - ${issueLabel}`)
+                    );
+                  })
+                )
+              )
+            )
+          ),
+          React.createElement('section', { id: 'signaling', className: isSignalingCollapsed ? 'collapsed' : '' },
+            React.createElement('header', null,
+              React.createElement('div', { className: 'header-content' },
+                React.createElement('h2', null, 'Manual Signaling'),
+                React.createElement('p', { className: 'status', id: 'status' }, status)
+              ),
+              React.createElement('button', {
+                className: 'collapse-toggle',
+                onClick: toggleSignalingCollapse,
+                'aria-label': isSignalingCollapsed ? 'Expand signaling' : 'Collapse signaling',
+                'aria-expanded': !isSignalingCollapsed
+              }, isSignalingCollapsed ? '▼' : '▲')
             ),
-            React.createElement('label', null,
-              React.createElement('strong', null, 'Remote Signal (paste received JSON here)'),
-              React.createElement('textarea', {
-                id: 'remote-signal',
-                value: remoteSignal,
-                onChange: (event) => setRemoteSignal(event.target.value),
+            !isSignalingCollapsed && React.createElement('div', { className: 'signaling-content' },
+              React.createElement('p', { className: 'warning' },
+                React.createElement('strong', null, 'Security notice:'),
+                'Sharing WebRTC signals reveals your network addresses. Only exchange offers with peers you trust.'
+              ),
+              React.createElement('p', { className: 'hint' },
+                'Step 1: One user clicks "Create Offer" and shares the generated signal below.', React.createElement('br'),
+                'Step 2: The other user pastes it in "Remote Signal", clicks "Apply Remote", then "Create Answer" and shares their response.', React.createElement('br'),
+                'Step 3: The first user pastes the answer into "Remote Signal" and applies it. Chat starts when the status says connected.'
+              ),
+              React.createElement('div', { className: 'controls' },
+                React.createElement('button', {
+                  id: 'create-offer',
+                  onClick: handleCreateOffer,
+                  disabled: isCreatingOffer
+                }, isCreatingOffer ? 'Working...' : 'Create Offer'),
+                React.createElement('button', {
+                  id: 'create-answer',
+                  onClick: handleCreateAnswer,
+                  disabled: isCreatingAnswer
+                }, isCreatingAnswer ? 'Working...' : 'Create Answer'),
+                React.createElement('button', {
+                  id: 'apply-remote',
+                  onClick: handleApplyRemote
+                }, 'Apply Remote'),
+                React.createElement('button', {
+                  id: 'disconnect',
+                  onClick: handleDisconnect,
+                  disabled: !channelReady,
+                  'aria-label': 'Disconnect from peer'
+                }, 'Disconnect')
+              ),
+              React.createElement('div', { className: 'signal-block' },
+                React.createElement('div', { className: 'signal-heading' },
+                  React.createElement('label', { htmlFor: 'local-signal' },
+                    React.createElement('strong', null, 'Local Signal (share this)')
+                  ),
+                  React.createElement('button', {
+                    onClick: handleCopySignal,
+                    disabled: !localSignal,
+                    className: 'copy-signal-button',
+                    'aria-label': 'Copy local signal to clipboard'
+                  }, copyButtonText)
+                ),
+                React.createElement('textarea', {
+                  id: 'local-signal',
+                  readOnly: true,
+                  value: localSignal,
+                  placeholder: 'Local SDP will appear here once ready.'
+                })
+              ),
+              React.createElement('label', null,
+                React.createElement('strong', null, 'Remote Signal (paste received JSON here)'),
+                React.createElement('textarea', {
+                  id: 'remote-signal',
+                  value: remoteSignal,
+                  onChange: (event) => setRemoteSignal(event.target.value),
+                  onKeyDown: (event) => {
+                    if ((event.metaKey || event.ctrlKey) && event.key === 'Enter') {
+                      event.preventDefault();
+                      handleApplyRemote();
+                    }
+                  },
+                  placeholder: 'Paste the JSON from your peer. Press Ctrl+Enter (Cmd+Enter on Mac) or click Apply Remote.'
+                })
+              )
+            )
+          ),
+          React.createElement('section', { id: 'chat' },
+            React.createElement('header', null,
+              React.createElement('div', { className: 'header-content' },
+                React.createElement('h2', null, 'Chat'),
+                React.createElement('p', { className: 'status', id: 'channel-status' }, channelStatus)
+              ),
+              React.createElement('div', { className: 'header-actions' },
+                React.createElement('button', {
+                  type: 'button',
+                  className: 'api-key-button',
+                  onClick: handleOpenApiKeyModal,
+                  ref: apiKeyButtonRef,
+                  disabled: isApiKeyModalOpen
+                }, openAiKey ? 'Update OpenAI Key' : 'Add OpenAI Key'),
+                messages.length > 0 && React.createElement('button', {
+                  onClick: handleClearMessages,
+                  className: 'clear-chat-button',
+                  'aria-label': 'Clear all chat messages'
+                }, 'Clear')
+              )
+            ),
+            React.createElement('div', {
+              id: 'messages',
+              'aria-live': 'polite',
+              ref: messagesContainerRef
+            },
+              messages.length === 0
+                ? React.createElement('div', {
+                    className: 'empty-state',
+                    role: 'note'
+                  }, 'No messages yet. Connect with a peer to start chatting.')
+                : messages.map((message) => (
+                    React.createElement('div', {
+                      key: message.id,
+                      className: 'chat-line',
+                      'data-role': message.role
+                    },
+                    React.createElement('strong', null, ROLE_LABELS[message.role] || 'Notice'),
+                    React.createElement('span', null, message.text))
+                  ))
+            ),
+            React.createElement('div', { className: 'chat-input' },
+              React.createElement('input', {
+                id: 'outgoing',
+                type: 'text',
+                placeholder: 'Type a message...',
+                autoComplete: 'off',
+                disabled: !channelReady,
+                value: inputText,
+                onChange: (event) => setInputText(event.target.value),
                 onKeyDown: (event) => {
-                  if ((event.metaKey || event.ctrlKey) && event.key === 'Enter') {
+                  if (event.key === 'Enter') {
                     event.preventDefault();
-                    handleApplyRemote();
+                    handleSend();
                   }
                 },
-                placeholder: 'Paste the JSON from your peer. Press Ctrl+Enter (Cmd+Enter on Mac) or click Apply Remote.'
-              })
-            )
-          )
-        ),
-        React.createElement('section', { id: 'chat' },
-          React.createElement('header', null,
-            React.createElement('div', { className: 'header-content' },
-              React.createElement('h2', null, 'Chat'),
-              React.createElement('p', { className: 'status', id: 'channel-status' }, channelStatus)
+                maxLength: MAX_MESSAGE_LENGTH,
+                'aria-label': 'Message input',
+                'aria-describedby': 'channel-status'
+              }),
+              React.createElement('button', {
+                type: 'button',
+                className: 'ai-button',
+                onClick: handleAiRewrite,
+                disabled: isAiBusy || !inputText.trim(),
+                'aria-label': openAiKey ? 'Rewrite message with OpenAI' : 'Add OpenAI key to enable AI',
+                title: openAiKey ? 'Let OpenAI suggest a clearer version of your message.' : 'Add your OpenAI key to enable AI assistance.'
+              }, isAiBusy ? 'Rewriting…' : 'Rewrite with AI'),
+              React.createElement('button', {
+                id: 'send',
+                onClick: handleSend,
+                disabled: !channelReady || !inputText.trim(),
+                'aria-label': 'Send message',
+                title: 'Send message'
+              }, 'Send')
             ),
-            messages.length > 0 && React.createElement('button', {
-              onClick: handleClearMessages,
-              className: 'clear-chat-button',
-              'aria-label': 'Clear all chat messages'
-            }, 'Clear')
-          ),
-          React.createElement('div', {
-            id: 'messages',
-            'aria-live': 'polite',
-            ref: messagesContainerRef
-          },
-            messages.length === 0
-              ? React.createElement('div', {
-                  className: 'empty-state',
-                  role: 'note'
-                }, 'No messages yet. Connect with a peer to start chatting.')
-              : messages.map((message) => (
-                  React.createElement('div', {
-                    key: message.id,
-                    className: 'chat-line',
-                    'data-role': message.role
-                  },
-                  React.createElement('strong', null, ROLE_LABELS[message.role] || 'Notice'),
-                  React.createElement('span', null, message.text))
-                ))
-          ),
-          React.createElement('div', { className: 'chat-input' },
-            React.createElement('input', {
-              id: 'outgoing',
-              type: 'text',
-              placeholder: 'Type a message...',
-              autoComplete: 'off',
-              disabled: !channelReady,
-              value: inputText,
-              onChange: (event) => setInputText(event.target.value),
-              onKeyDown: (event) => {
-                if (event.key === 'Enter') {
-                  event.preventDefault();
-                  handleSend();
-                }
-              },
-              maxLength: MAX_MESSAGE_LENGTH,
-              'aria-label': 'Message input',
-              'aria-describedby': 'channel-status'
-            }),
-            React.createElement('button', {
-              id: 'send',
-              onClick: handleSend,
-              disabled: !channelReady || !inputText.trim(),
-              'aria-label': 'Send message',
-              title: 'Send message'
-            }, 'Send')
-          ),
-          React.createElement('p', {
-            className: 'hint chat-counter',
-            role: 'note'
-          }, `${inputText.length} / ${MAX_MESSAGE_LENGTH}`)
+            React.createElement('p', {
+              className: 'hint chat-counter',
+              role: 'note'
+            }, `${inputText.length} / ${MAX_MESSAGE_LENGTH}`),
+            (aiStatus || aiError) && React.createElement('p', {
+              className: `hint ai-feedback${aiError ? ' ai-feedback-error' : ''}`,
+              role: 'note'
+            }, aiError || aiStatus)
+          )
         )
       )
     );

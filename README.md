@@ -23,6 +23,7 @@ TheCommunity is a community-driven project that demonstrates true peer-to-peer c
 - **Message History** - Visual distinction between your messages, peer messages, and system notices
 - **Auto-scroll** - Messages automatically scroll to show the latest content
 - **Input Validation** - Client-side validation for message length and format
+- **AI Draft Assistance** - Optional OpenAI-powered rewrite button that refines your text locally using your own API key
 
 ### 🎨 User Interface
 - **Collapsible Signaling Window** - Hide the technical signaling UI once connected
@@ -82,6 +83,13 @@ Since there's no signaling server, users manually exchange WebRTC signals:
    - Once connected, the signaling window can be collapsed
    - Messages flow directly peer-to-peer
    - No server involvement in the conversation
+
+### AI Draft Assistance (Optional)
+
+1. When the app starts you can paste a personal OpenAI API key. The key stays in browser memory only and is sent exclusively to `api.openai.com`.
+2. Draft a message and click **Rewrite with AI** to request a refined version. The result replaces your local draft so you can review it before sending.
+3. Use **Update OpenAI Key** in the chat header any time to rotate or remove the key.
+4. Choose **Disable AI** or refresh the page to clear the key completely. You are responsible for any usage charges billed to your OpenAI account.
 
 ### WebRTC Architecture
 
@@ -176,12 +184,14 @@ TheCommunity/
 - ❌ Authenticate users
 - ❌ Persist message history
 - ❌ Hide your IP address from peers
+- ❌ Proxy OpenAI requests on your behalf (your browser talks to api.openai.com directly with your key)
 
 ### Recommendations
 - Only connect with people you trust
 - Don't share sensitive information
 - Be aware that your IP address is visible to peers
 - Consider using a VPN if privacy is a concern
+- Treat your OpenAI API key like a password and only enter it on devices you control
 
 ## Development
 
