@@ -390,7 +390,13 @@
     return (
       React.createElement('main', null,
         React.createElement('div', { className: 'header-with-about' },
-          React.createElement('h1', null, 'Peer-to-Peer WebRTC Chat'),
+          React.createElement('h1', { className: 'app-title' },
+            React.createElement('span', {
+              className: 'app-title-icon',
+              'aria-hidden': 'true'
+            }, '🐬'),
+            React.createElement('span', { className: 'app-title-text' }, 'PodTalk')
+          ),
           React.createElement('button', {
             className: 'about-button',
             onClick: toggleAbout,

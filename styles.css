@@ -41,6 +41,20 @@ h1 {
   gap: 1rem;
   position: relative;
 }
+.app-title {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.65rem;
+  font-weight: 700;
+  color: #ffffff;
+}
+.app-title-icon {
+  font-size: clamp(2rem, 3vw, 2.6rem);
+}
+.app-title-text {
+  white-space: nowrap;
+}
 .about-button {
   position: absolute;
   right: 0;
