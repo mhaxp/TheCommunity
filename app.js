@@ -35,6 +35,7 @@
     const [contributors, setContributors] = useState([]);
     const [contributorsError, setContributorsError] = useState('');
     const [isLoadingContributors, setIsLoadingContributors] = useState(false);
+    const [copyButtonText, setCopyButtonText] = useState('Copy');
 
     const pcRef = useRef(null);
     const channelRef = useRef(null);
@@ -303,6 +304,30 @@
       setIsAboutOpen((prev) => !prev);
     }, []);
 
+    /**
+     * Copies the current local signal to the clipboard for easy sharing.
+     */
+    const handleCopySignal = useCallback(async () => {
+      if (!localSignal) {
+        return;
+      }
+      try {
+        await navigator.clipboard.writeText(localSignal);
+        setCopyButtonText('Copied!');
+        setTimeout(() => setCopyButtonText('Copy'), 2000);
+      } catch (err) {
+        console.error('Failed to copy local signal', err);
+        setCopyButtonText('Failed');
+        setTimeout(() => setCopyButtonText('Copy'), 2000);
+      }
+    }, [localSignal]);
+
+    useEffect(() => {
+      if (!localSignal) {
+        setCopyButtonText('Copy');
+      }
+    }, [localSignal]);
+
     useEffect(() => {
       if (isAboutOpen) {
         if (closeAboutButtonRef.current) {
@@ -537,8 +562,18 @@
                 onClick: handleApplyRemote
               }, 'Apply Remote')
             ),
-            React.createElement('label', null,
-              React.createElement('strong', null, 'Local Signal (share this)'),
+            React.createElement('div', { className: 'signal-block' },
+              React.createElement('div', { className: 'signal-heading' },
+                React.createElement('label', { htmlFor: 'local-signal' },
+                  React.createElement('strong', null, 'Local Signal (share this)')
+                ),
+                React.createElement('button', {
+                  onClick: handleCopySignal,
+                  disabled: !localSignal,
+                  className: 'copy-signal-button',
+                  'aria-label': 'Copy local signal to clipboard'
+                }, copyButtonText)
+              ),
               React.createElement('textarea', {
                 id: 'local-signal',
                 readOnly: true,
