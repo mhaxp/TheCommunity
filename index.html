@@ -21,6 +21,63 @@
                 <p class="status">System Status: <span id="status">Initializing...</span></p>
             </div>
 
+            <!-- WebRTC Connection Area -->
+            <div id="webrtc-area" class="webrtc-area">
+                <h3>WebRTC Connection Panel</h3>
+
+                <div class="connection-status">
+                    <div class="status-indicator">
+                        <span class="status-dot" id="connection-dot"></span>
+                        <span id="connection-status">Not Connected</span>
+                    </div>
+                    <div class="peer-count">
+                        <strong>Connected Peers:</strong> <span id="peer-count">0</span>
+                    </div>
+                </div>
+
+                <div class="connection-controls">
+                    <div class="control-group">
+                        <label for="room-id">Room ID / Peer Code:</label>
+                        <input type="text" id="room-id" placeholder="Enter room ID or generate new">
+                        <button id="generate-room-btn" class="btn-secondary">Generate</button>
+                    </div>
+
+                    <div class="control-buttons">
+                        <button id="create-room-btn" class="btn-primary" disabled>Create Room</button>
+                        <button id="join-room-btn" class="btn-primary" disabled>Join Room</button>
+                        <button id="disconnect-btn" class="btn-danger" disabled>Disconnect</button>
+                    </div>
+                </div>
+
+                <details class="technical-details">
+                    <summary>Technical Details</summary>
+                    <div class="details-content">
+                        <div class="detail-item">
+                            <strong>WebRTC Support:</strong> <span id="webrtc-support">Checking...</span>
+                        </div>
+                        <div class="detail-item">
+                            <strong>Connection State:</strong> <span id="connection-state">new</span>
+                        </div>
+                        <div class="detail-item">
+                            <strong>Signaling State:</strong> <span id="signaling-state">-</span>
+                        </div>
+                        <div class="detail-item">
+                            <strong>ICE Connection State:</strong> <span id="ice-state">-</span>
+                        </div>
+                        <div class="detail-item">
+                            <strong>Data Channels:</strong> <span id="data-channels">0</span>
+                        </div>
+                    </div>
+                </details>
+
+                <div class="peers-list">
+                    <h4>Connected Peers</h4>
+                    <div id="peers-container" class="peers-container">
+                        <p class="no-peers">No peers connected</p>
+                    </div>
+                </div>
+            </div>
+
             <!-- Future chat interface will go here -->
             <div id="chat-container" class="chat-container" style="display: none;">
                 <div id="messages" class="messages"></div>
