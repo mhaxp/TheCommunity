@@ -1,9 +1,0 @@
-{
-  "name": "TheGame",
-  "version": "1.0.0",
-  "description": "WebRTC P2P Chat Application",
-  "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
-  },
-  "private": true
-}
