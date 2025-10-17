@@ -11,7 +11,7 @@ At the start this is a Chat-App. What it becomes? I dont know.
 
 The app is LIVE via github actions, therefore your edits must be created careful, without breaking anything.
 You use a lot of care for your work, and a lot of time is spent for thinking.
-You can always check the current state (before commit) here: https://themorpheus407.github.io/TheCommunity/
+You can always check the current state (before commit) here: https://mhaxp.github.io/TheCommunity/
 
 You have the following rules:
 - You always code clean
