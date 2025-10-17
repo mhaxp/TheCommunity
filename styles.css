@@ -166,6 +166,145 @@ footer p {
     opacity: 0.9;
 }
 
+/* Hangman Game Styles */
+.hangman-game {
+    margin-top: 3rem;
+    padding-top: 3rem;
+    border-top: 2px solid var(--border-color);
+}
+
+.hangman-game h2 {
+    text-align: center;
+    font-size: 2rem;
+    color: var(--secondary-color);
+    margin-bottom: 2rem;
+}
+
+.game-container {
+    display: flex;
+    gap: 2rem;
+    align-items: flex-start;
+    justify-content: center;
+    flex-wrap: wrap;
+}
+
+.hangman-display {
+    flex-shrink: 0;
+    background-color: #f8f9fa;
+    border-radius: 8px;
+    padding: 1rem;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+#hangman-svg {
+    display: block;
+}
+
+.game-content {
+    flex: 1;
+    min-width: 300px;
+    max-width: 500px;
+}
+
+.word-display {
+    font-size: 2.5rem;
+    font-weight: bold;
+    text-align: center;
+    color: var(--primary-color);
+    letter-spacing: 0.5rem;
+    margin-bottom: 1.5rem;
+    min-height: 3rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.game-message {
+    text-align: center;
+    font-size: 1.2rem;
+    font-weight: 500;
+    margin-bottom: 1.5rem;
+    padding: 0.75rem;
+    border-radius: 4px;
+    background-color: #f8f9fa;
+    color: var(--text-color);
+}
+
+.game-message.win {
+    background-color: #d4edda;
+    color: #155724;
+}
+
+.game-message.lose {
+    background-color: #f8d7da;
+    color: #721c24;
+}
+
+.letters-container {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(40px, 1fr));
+    gap: 0.5rem;
+    margin-bottom: 1.5rem;
+}
+
+.letter-button {
+    padding: 0.75rem;
+    font-size: 1rem;
+    font-weight: bold;
+    background-color: var(--secondary-color);
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-family: inherit;
+}
+
+.letter-button:hover:not(:disabled) {
+    background-color: #2980b9;
+    transform: translateY(-2px);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.letter-button:active:not(:disabled) {
+    transform: translateY(0);
+}
+
+.letter-button:disabled {
+    cursor: not-allowed;
+    opacity: 0.5;
+}
+
+.letter-button.correct {
+    background-color: var(--success-color);
+}
+
+.letter-button.wrong {
+    background-color: var(--accent-color);
+}
+
+.new-game-button {
+    width: 100%;
+    padding: 1rem;
+    font-size: 1.1rem;
+    font-weight: bold;
+    background-color: var(--primary-color);
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background-color 0.2s;
+    font-family: inherit;
+}
+
+.new-game-button:hover {
+    background-color: #1a252f;
+}
+
+.new-game-button:active {
+    transform: scale(0.98);
+}
+
 /* Responsive Design */
 @media (max-width: 768px) {
     header h1 {
@@ -182,5 +321,28 @@ footer p {
 
     .container {
         padding: 1rem;
+    }
+
+    .hangman-game h2 {
+        font-size: 1.5rem;
+    }
+
+    .game-container {
+        flex-direction: column;
+        align-items: center;
+    }
+
+    .word-display {
+        font-size: 1.8rem;
+        letter-spacing: 0.3rem;
+    }
+
+    .letters-container {
+        grid-template-columns: repeat(auto-fill, minmax(35px, 1fr));
+    }
+
+    .letter-button {
+        padding: 0.5rem;
+        font-size: 0.9rem;
     }
 }
