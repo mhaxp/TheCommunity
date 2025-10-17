@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="TheCommunity - A peer-to-peer chat application powered by WebRTC">
+    <title>TheCommunity - Chat</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <header>
+        <h1>TheCommunity</h1>
+        <p class="subtitle">Peer-to-peer communication powered by WebRTC</p>
+    </header>
+
+    <main>
+        <div class="container">
+            <div class="welcome-message">
+                <h2>Hello World</h2>
+                <p>Welcome to TheCommunity - a decentralized chat application.</p>
+                <p class="status">System Status: <span id="status">Initializing...</span></p>
+            </div>
+
+            <!-- Future chat interface will go here -->
+            <div id="chat-container" class="chat-container" style="display: none;">
+                <div id="messages" class="messages"></div>
+                <div class="input-area">
+                    <input type="text" id="message-input" placeholder="Type a message..." disabled>
+                    <button id="send-button" disabled>Send</button>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <footer>
+        <p>Built with WebRTC - No servers, no tracking, just peer-to-peer communication</p>
+    </footer>
+
+    <script src="app.js"></script>
+</body>
+</html>
