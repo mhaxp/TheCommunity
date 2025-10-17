@@ -18,7 +18,7 @@ TheCommunity is a community-driven project where the direction and features are 
 
 ## Live Demo
 
-Visit the live application: [https://themorpheus407.github.io/TheCommunity/](https://themorpheus407.github.io/TheCommunity/)
+Visit the live application: [https://mhaxp.github.io/TheCommunity/](https://mhaxp.github.io/TheCommunity/)
 
 ## Architecture
 
