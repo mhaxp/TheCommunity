@@ -230,6 +230,44 @@ const baseTranslation = Object.freeze({
     sentImage: (fileName) => `Bild gesendet: ${fileName}`,
     receivedImage: (fileName) => `Bild empfangen: ${fileName}`
   }
+  statistics: {
+    title: 'KI-Statistik',
+    header: 'Von KI gel├Âste Issues',
+    loading: 'Lade Statistiken...',
+    error: 'Statistiken konnten nicht geladen werden.',
+    noIssues: 'Noch keine von KI gel├Âsten Issues gefunden.',
+    issueNumber: (num) => `Issue #${num}`,
+    status: {
+      success: 'Erfolgreich gel├Âst',
+      failed: 'Probleme aufgetreten',
+      pending: 'In Bearbeitung'
+    },
+    columns: {
+      issue: 'Issue',
+      title: 'Titel',
+      summary: 'Zusammenfassung',
+      status: 'Status'
+    },
+    summaryPlaceholder: 'Zusammenfassung wird geladen...',
+    summaryError: 'Zusammenfassung nicht verf├╝gbar',
+    aiSummaryNote: 'KI-Zusammenfassungen werden generiert, wenn ein OpenAI-Schl├╝ssel verf├╝gbar ist.',
+    cachedNote: 'Daten werden 5 Minuten zwischengespeichert.',
+    joke: {
+      title: 'Makaberer Witz des Tages',
+      jokes: [
+        'Warum m├Âgen Programmierer die Natur nicht? Zu viele Bugs.',
+        'Ein Entwickler starb. Sein letztes Wort war: "Es funktioniert auf meiner Maschine..."',
+        'Wie viele Programmierer braucht man, um eine Gl├╝hbirne zu wechseln? Keinen. Das ist ein Hardware-Problem.',
+        'Der schlimmste Bug ist der, den du schon behoben hast... in einem anderen Branch.',
+        'Ein SQL-Query geht in eine Bar, sieht zwei Tabellen und fragt: "Darf ich joinen?"',
+        'Debugging ist wie ein Detektivfilm, in dem du gleichzeitig M├Ârder und Detektiv bist.',
+        'Es gibt nur zwei harte Probleme in der Informatik: Cache-Invalidierung, Namen vergeben und Off-by-One-Fehler.',
+        'Das einzige, was schlimmer ist als Legacy-Code, ist Code, den du selbst vor 6 Monaten geschrieben hast.',
+        '"Es ist nur ein kleiner Fix" - Ber├╝hmte letzte Worte vor 3 Tagen Debugging.',
+        'Manche Menschen haben Albtr├ñume. Entwickler tr├ñumen von Production-Deployments am Freitagnachmittag.'
+      ]
+    }
+  }
 });
 
 function applyReplacements(text, replacements) {

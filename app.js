@@ -288,6 +288,10 @@
     const [canControlPeer, setCanControlPeer] = useState(false);
     const [remoteControlStatus, setRemoteControlStatus] = useState(t.remoteControl.statusDisabled);
     const [remotePointerState, setRemotePointerState] = useState({ visible: false, x: 50, y: 50 });
+    const [statisticsIssues, setStatisticsIssues] = useState([]);
+    const [isLoadingStatistics, setIsLoadingStatistics] = useState(false);
+    const [statisticsError, setStatisticsError] = useState('');
+    const [randomJoke, setRandomJoke] = useState('');
 
     const pcRef = useRef(null);
     const channelRef = useRef(null);
@@ -1760,6 +1764,192 @@
     }, [isAboutOpen, t]);
 
     useEffect(() => {
+      const jokes = t.statistics.joke.jokes;
+      if (Array.isArray(jokes) && jokes.length > 0) {
+        const randomIndex = Math.floor(Math.random() * jokes.length);
+        setRandomJoke(jokes[randomIndex]);
+      }
+    }, [t]);
+
+    useEffect(() => {
+      const controller = new AbortController();
+      let didSucceed = false;
+
+      const loadStatistics = async () => {
+        setIsLoadingStatistics(true);
+        setStatisticsError('');
+        try {
+          // Check cache first
+          const cacheKey = 'thecommunity.statistics-cache';
+          const cacheTimeKey = 'thecommunity.statistics-cache-time';
+          const cacheMaxAge = 5 * 60 * 1000; // 5 minutes
+
+          try {
+            const cachedData = localStorage.getItem(cacheKey);
+            const cachedTime = localStorage.getItem(cacheTimeKey);
+
+            if (cachedData && cachedTime) {
+              const age = Date.now() - parseInt(cachedTime, 10);
+              if (age < cacheMaxAge) {
+                const parsed = JSON.parse(cachedData);
+                setStatisticsIssues(parsed);
+                setIsLoadingStatistics(false);
+                return;
+              }
+            }
+          } catch (cacheError) {
+            console.warn('Cache read failed, fetching fresh data', cacheError);
+          }
+
+          const response = await fetch(
+            'https://api.github.com/repos/TheMorpheus407/TheCommunity/issues?state=all&per_page=100',
+            {
+              signal: controller.signal,
+              headers: {
+                Accept: 'application/vnd.github+json'
+              }
+            }
+          );
+
+          if (!response.ok) {
+            throw new Error(`Request failed with status ${response.status}`);
+          }
+
+          const payload = await response.json();
+          if (controller.signal.aborted) {
+            return;
+          }
+
+          const aiSolvedIssues = [];
+          if (Array.isArray(payload)) {
+            for (const item of payload) {
+              if (!item || item.pull_request) {
+                continue;
+              }
+
+              // More accurate detection: check for Claude labels or fetch comments to check for Claude mentions
+              const hasClaudeLabel = item.labels && Array.isArray(item.labels) &&
+                item.labels.some(label => label && typeof label.name === 'string' &&
+                  label.name.toLowerCase().includes('claude'));
+
+              // Only consider issues with comments that might involve Claude
+              if (hasClaudeLabel || item.comments > 0) {
+                // Determine status more accurately
+                const status = item.state === 'closed'
+                  ? (item.state_reason === 'completed' ? 'success' : 'failed')
+                  : 'pending';
+
+                const bodyText = item.body || '';
+                let summary = bodyText.slice(0, 150);
+                if (bodyText.length > 150) {
+                  summary += '...';
+                }
+
+                aiSolvedIssues.push({
+                  number: item.number,
+                  title: item.title || 'Untitled',
+                  body: bodyText,
+                  status: status,
+                  url: item.html_url,
+                  summary: summary,
+                  needsAiSummary: bodyText.length > 200 && openAiKey
+                });
+              }
+            }
+          }
+
+          // Try to cache the results
+          try {
+            localStorage.setItem(cacheKey, JSON.stringify(aiSolvedIssues));
+            localStorage.setItem(cacheTimeKey, Date.now().toString());
+          } catch (cacheError) {
+            console.warn('Failed to cache statistics', cacheError);
+          }
+
+          setStatisticsIssues(aiSolvedIssues);
+          didSucceed = true;
+
+          // If OpenAI key is available, generate AI summaries for longer issues
+          if (openAiKey && aiSolvedIssues.length > 0) {
+            generateAiSummaries(aiSolvedIssues, controller.signal);
+          }
+        } catch (error) {
+          if (controller.signal.aborted) {
+            return;
+          }
+          console.error('Failed to load statistics', error);
+          setStatisticsError(t.statistics.error);
+        } finally {
+          if (!controller.signal.aborted) {
+            setIsLoadingStatistics(false);
+          }
+        }
+      };
+
+      const generateAiSummaries = async (issues, signal) => {
+        for (const issue of issues) {
+          if (signal.aborted || !issue.needsAiSummary) {
+            continue;
+          }
+
+          try {
+            const response = await fetch('https://api.openai.com/v1/chat/completions', {
+              method: 'POST',
+              signal: signal,
+              headers: {
+                'Content-Type': 'application/json',
+                Authorization: `Bearer ${openAiKey}`
+              },
+              body: JSON.stringify({
+                model: OPENAI_MODEL,
+                messages: [
+                  {
+                    role: 'system',
+                    content: 'Summarize the following GitHub issue in one concise sentence (max 100 characters). Focus on what needs to be done.'
+                  },
+                  {
+                    role: 'user',
+                    content: `Title: ${issue.title}\n\nDescription: ${issue.body.slice(0, 500)}`
+                  }
+                ],
+                temperature: 0.5,
+                max_tokens: 60
+              })
+            });
+
+            if (!response.ok || signal.aborted) {
+              continue;
+            }
+
+            const data = await response.json();
+            const aiSummary = data?.choices?.[0]?.message?.content?.trim();
+
+            if (aiSummary) {
+              setStatisticsIssues((prev) => prev.map((item) =>
+                item.number === issue.number
+                  ? { ...item, summary: aiSummary }
+                  : item
+              ));
+            }
+          } catch (error) {
+            if (!signal.aborted) {
+              console.warn(`Failed to generate AI summary for issue #${issue.number}`, error);
+            }
+          }
+
+          // Add delay to respect rate limits
+          await new Promise((resolve) => setTimeout(resolve, 1000));
+        }
+      };
+
+      loadStatistics();
+
+      return () => {
+        controller.abort();
+      };
+    }, [t, openAiKey]);
+
+    useEffect(() => {
       const container = messagesContainerRef.current;
       if (container) {
         container.scrollTop = container.scrollHeight;
@@ -2428,6 +2618,63 @@
               className: `hint ai-feedback${aiError ? ' ai-feedback-error' : ''}`,
               role: 'note'
             }, aiError || aiStatus)
+          ),
+          React.createElement('section', { id: 'statistics' },
+            React.createElement('header', null,
+              React.createElement('div', { className: 'header-content' },
+                React.createElement('h2', null, t.statistics.title),
+                React.createElement('p', { className: 'status' }, t.statistics.header)
+              )
+            ),
+            !isLoadingStatistics && !statisticsError && React.createElement('p', { className: 'hint' },
+              openAiKey ? t.statistics.aiSummaryNote : t.statistics.cachedNote
+            ),
+            React.createElement('div', { className: 'statistics-content' },
+              isLoadingStatistics && React.createElement('p', { className: 'statistics-status' }, t.statistics.loading),
+              statisticsError && React.createElement('p', { className: 'statistics-status statistics-error' }, statisticsError),
+              !isLoadingStatistics && !statisticsError && statisticsIssues.length === 0 &&
+                React.createElement('p', { className: 'statistics-status' }, t.statistics.noIssues),
+              statisticsIssues.length > 0 && React.createElement('div', { className: 'statistics-table-wrapper' },
+                React.createElement('table', { className: 'statistics-table' },
+                  React.createElement('thead', null,
+                    React.createElement('tr', null,
+                      React.createElement('th', null, t.statistics.columns.issue),
+                      React.createElement('th', null, t.statistics.columns.title),
+                      React.createElement('th', null, t.statistics.columns.summary),
+                      React.createElement('th', null, t.statistics.columns.status)
+                    )
+                  ),
+                  React.createElement('tbody', null,
+                    statisticsIssues.map((issue) => {
+                      const statusClass = `status-badge status-${issue.status}`;
+                      const statusText = t.statistics.status[issue.status] || issue.status;
+                      const summary = issue.summary || issue.body.slice(0, 150) + (issue.body.length > 150 ? '...' : '');
+                      const isAiGenerated = issue.needsAiSummary && issue.summary && issue.summary !== (issue.body.slice(0, 150) + (issue.body.length > 150 ? '...' : ''));
+                      const summaryClass = `issue-summary${isAiGenerated ? ' summary-ai' : ''}${issue.needsAiSummary && !isAiGenerated ? ' summary-loading' : ''}`;
+
+                      return React.createElement('tr', { key: issue.number },
+                        React.createElement('td', { className: 'issue-number' },
+                          React.createElement('a', {
+                            href: issue.url,
+                            target: '_blank',
+                            rel: 'noopener noreferrer'
+                          }, t.statistics.issueNumber(issue.number))
+                        ),
+                        React.createElement('td', { className: 'issue-title' }, issue.title),
+                        React.createElement('td', { className: summaryClass }, summary),
+                        React.createElement('td', { className: 'issue-status' },
+                          React.createElement('span', { className: statusClass }, statusText)
+                        )
+                      );
+                    })
+                  )
+                )
+              ),
+              randomJoke && React.createElement('div', { className: 'statistics-joke' },
+                React.createElement('h3', null, t.statistics.joke.title),
+                React.createElement('p', null, randomJoke)
+              )
+            )
           )
         )
       )
