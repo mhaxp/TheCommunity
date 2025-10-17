@@ -1,1 +1,49 @@
+name: Auto-Merge Trigger
 
+on:
+  workflow_run:
+    workflows: ["Claude Code Review"]
+    types: [completed]
+
+jobs:
+  trigger-claude-merge:
+    # Only trigger when claude-review succeeds
+    if: |
+      github.event.workflow_run.conclusion == 'success' &&
+      github.event.workflow_run.head_branch != 'main'
+
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+
+    steps:
+      - name: Find PR number for branch
+        id: find-pr
+        run: |
+          PR_NUMBER=$(gh pr list \
+            --repo "${{ github.repository }}" \
+            --head "${{ github.event.workflow_run.head_branch }}" \
+            --json number \
+            --jq '.[0].number')
+
+          if [ -z "$PR_NUMBER" ]; then
+            echo "No PR found for branch ${{ github.event.workflow_run.head_branch }}"
+            exit 0
+          fi
+
+          echo "pr_number=$PR_NUMBER" >> $GITHUB_OUTPUT
+          echo "Found PR #$PR_NUMBER"
+        env:
+          GH_TOKEN: ${{ github.token }}
+
+      - name: Merge PR automatically
+        if: steps.find-pr.outputs.pr_number != ''
+        run: |
+          echo "Merging PR #${{ steps.find-pr.outputs.pr_number }} after successful review"
+          gh pr merge ${{ steps.find-pr.outputs.pr_number }} \
+            --repo "${{ github.repository }}" \
+            --merge \
+            --admin
+        env:
+          GH_TOKEN: ${{ github.token }}
