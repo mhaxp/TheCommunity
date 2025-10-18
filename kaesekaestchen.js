@@ -332,7 +332,114 @@ const KaesekaestchenGame = {
             }
         }
 
+        // After checking adjacent boxes, check for enclosed areas
+        const enclosedCount = this.claimEnclosedAreas();
+        completedCount += enclosedCount;
+
         return completedCount;
+    },
+
+    /**
+     * Detect and claim all boxes that are enclosed (cannot reach the edge)
+     * @returns {number} Number of newly claimed boxes
+     */
+    claimEnclosedAreas() {
+        let claimedCount = 0;
+
+        // Check each unclaimed box to see if it's enclosed
+        for (let row = 0; row < this.gridSize; row++) {
+            for (let col = 0; col < this.gridSize; col++) {
+                if (this.boxes[row][col] === null) {
+                    // Check if this box is enclosed
+                    if (!this.canReachEdge(row, col)) {
+                        // Box is enclosed, claim it for current player
+                        this.boxes[row][col] = this.currentPlayerIndex;
+                        claimedCount++;
+                    }
+                }
+            }
+        }
+
+        return claimedCount;
+    },
+
+    /**
+     * Check if a box can reach the edge of the grid without crossing completed lines
+     * Uses BFS to explore connected boxes
+     * @param {number} startRow - Starting box row
+     * @param {number} startCol - Starting box column
+     * @returns {boolean} True if the box can reach the edge
+     */
+    canReachEdge(startRow, startCol) {
+        // If we're already at the edge, we can reach it
+        if (startRow === 0 || startRow === this.gridSize - 1 ||
+            startCol === 0 || startCol === this.gridSize - 1) {
+            return true;
+        }
+
+        const visited = new Set();
+        const queue = [[startRow, startCol]];
+        visited.add(`${startRow},${startCol}`);
+
+        while (queue.length > 0) {
+            const [row, col] = queue.shift();
+
+            // Try to move to adjacent boxes
+            // Move up (if no horizontal line blocks us)
+            if (row > 0 && this.horizontalLines[row][col] === null) {
+                const key = `${row - 1},${col}`;
+                if (!visited.has(key)) {
+                    // Check if this new position is at the edge
+                    if (row - 1 === 0 || col === 0 || col === this.gridSize - 1) {
+                        return true;
+                    }
+                    visited.add(key);
+                    queue.push([row - 1, col]);
+                }
+            }
+
+            // Move down (if no horizontal line blocks us)
+            if (row < this.gridSize - 1 && this.horizontalLines[row + 1][col] === null) {
+                const key = `${row + 1},${col}`;
+                if (!visited.has(key)) {
+                    // Check if this new position is at the edge
+                    if (row + 1 === this.gridSize - 1 || col === 0 || col === this.gridSize - 1) {
+                        return true;
+                    }
+                    visited.add(key);
+                    queue.push([row + 1, col]);
+                }
+            }
+
+            // Move left (if no vertical line blocks us)
+            if (col > 0 && this.verticalLines[row][col] === null) {
+                const key = `${row},${col - 1}`;
+                if (!visited.has(key)) {
+                    // Check if this new position is at the edge
+                    if (col - 1 === 0 || row === 0 || row === this.gridSize - 1) {
+                        return true;
+                    }
+                    visited.add(key);
+                    queue.push([row, col - 1]);
+                }
+            }
+
+            // Move right (if no vertical line blocks us)
+            if (col < this.gridSize - 1 && this.verticalLines[row][col + 1] === null) {
+                const key = `${row},${col + 1}`;
+                if (!visited.has(key)) {
+                    // Check if this new position is at the edge
+                    if (col + 1 === this.gridSize - 1 || row === 0 || row === this.gridSize - 1) {
+                        return true;
+                    }
+                    visited.add(key);
+                    queue.push([row, col + 1]);
+                }
+            }
+        }
+
+        // If we exhausted the queue without reaching the edge, we're enclosed
+        return false;
     },
 
     /**
