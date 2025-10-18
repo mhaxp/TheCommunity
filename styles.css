@@ -503,6 +503,210 @@ footer p {
     display: none;
 }
 
+/* Pub Quiz Game Styles */
+.pub-quiz-game {
+    margin-top: 3rem;
+    padding-top: 3rem;
+    border-top: 2px solid var(--border-color);
+}
+
+.pub-quiz-game h2 {
+    text-align: center;
+    font-size: 2rem;
+    color: var(--secondary-color);
+    margin-bottom: 2rem;
+}
+
+.quiz-game-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 2rem;
+    padding: 1rem;
+    background-color: #f8f9fa;
+    border-radius: 8px;
+    flex-wrap: wrap;
+    gap: 1rem;
+}
+
+.quiz-score,
+.quiz-progress,
+.quiz-timer {
+    font-size: 1.2rem;
+    font-weight: 600;
+    color: var(--primary-color);
+}
+
+.quiz-timer.warning {
+    color: var(--accent-color);
+    animation: pulse 1s ease-in-out infinite;
+}
+
+@keyframes pulse {
+    0%, 100% {
+        opacity: 1;
+    }
+    50% {
+        opacity: 0.5;
+    }
+}
+
+.quiz-question-container {
+    background-color: #f8f9fa;
+    border-radius: 8px;
+    padding: 2rem;
+    margin-bottom: 1.5rem;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.quiz-question {
+    font-size: 1.4rem;
+    color: var(--primary-color);
+    margin-bottom: 1.5rem;
+    line-height: 1.6;
+    text-align: center;
+}
+
+.quiz-answers {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+}
+
+.quiz-answer-button {
+    padding: 1.2rem;
+    font-size: 1.05rem;
+    font-weight: 500;
+    background-color: var(--secondary-color);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-family: inherit;
+    text-align: left;
+    line-height: 1.4;
+}
+
+.quiz-answer-button:hover:not(:disabled) {
+    background-color: #2980b9;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+}
+
+.quiz-answer-button:active:not(:disabled) {
+    transform: translateY(0);
+}
+
+.quiz-answer-button:disabled {
+    cursor: not-allowed;
+}
+
+.quiz-answer-button.correct {
+    background-color: var(--success-color);
+    animation: correctAnswer 0.5s ease-out;
+}
+
+.quiz-answer-button.wrong {
+    background-color: var(--accent-color);
+    animation: wrongAnswer 0.3s ease-out;
+}
+
+@keyframes correctAnswer {
+    0% {
+        transform: scale(1);
+    }
+    50% {
+        transform: scale(1.05);
+    }
+    100% {
+        transform: scale(1);
+    }
+}
+
+@keyframes wrongAnswer {
+    0%, 100% {
+        transform: translateX(0);
+    }
+    25% {
+        transform: translateX(-5px);
+    }
+    75% {
+        transform: translateX(5px);
+    }
+}
+
+.quiz-explanation {
+    padding: 1.5rem;
+    border-radius: 8px;
+    font-size: 1.05rem;
+    line-height: 1.6;
+    margin-top: 1rem;
+}
+
+.quiz-explanation.correct {
+    background-color: #d4edda;
+    color: #155724;
+    border-left: 4px solid var(--success-color);
+}
+
+.quiz-explanation.wrong {
+    background-color: #f8d7da;
+    color: #721c24;
+    border-left: 4px solid var(--accent-color);
+}
+
+.quiz-controls {
+    display: flex;
+    justify-content: center;
+    gap: 1rem;
+}
+
+.quiz-next-button,
+.quiz-new-game-button {
+    padding: 1rem 2rem;
+    font-size: 1.1rem;
+    font-weight: bold;
+    background-color: var(--primary-color);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-family: inherit;
+}
+
+.quiz-next-button:hover,
+.quiz-new-game-button:hover {
+    background-color: #1a252f;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+}
+
+.quiz-next-button:active,
+.quiz-new-game-button:active {
+    transform: scale(0.98);
+}
+
+.quiz-results {
+    text-align: center;
+    padding: 2rem;
+}
+
+.quiz-results h3 {
+    font-size: 1.8rem;
+    color: var(--primary-color);
+    margin-bottom: 1.5rem;
+}
+
+.quiz-final-score {
+    font-size: 1.4rem;
+    font-weight: 600;
+    color: var(--secondary-color);
+    margin-top: 1rem;
+}
+
 /* Responsive Design */
 @media (max-width: 768px) {
     .cat-image {
@@ -565,6 +769,48 @@ footer p {
     }
 
     .kaese-game-message {
+        font-size: 1.1rem;
+    }
+
+    /* Pub Quiz responsive */
+    .pub-quiz-game h2 {
+        font-size: 1.5rem;
+    }
+
+    .quiz-game-header {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .quiz-score,
+    .quiz-progress,
+    .quiz-timer {
+        font-size: 1rem;
+    }
+
+    .quiz-question {
+        font-size: 1.1rem;
+    }
+
+    .quiz-answers {
+        grid-template-columns: 1fr;
+    }
+
+    .quiz-answer-button {
+        padding: 1rem;
+        font-size: 0.95rem;
+    }
+
+    .quiz-explanation {
+        font-size: 0.95rem;
+        padding: 1rem;
+    }
+
+    .quiz-results h3 {
+        font-size: 1.4rem;
+    }
+
+    .quiz-final-score {
         font-size: 1.1rem;
     }
 }
