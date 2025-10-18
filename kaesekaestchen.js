@@ -18,8 +18,8 @@ const KaesekaestchenGame = {
     // Game state
     currentPlayerIndex: 0,
     scores: [0, 0],
-    horizontalLines: [], // [row][col] - lines going right
-    verticalLines: [], // [row][col] - lines going down
+    horizontalLines: [], // [row][col] - player index who drew the line or null
+    verticalLines: [], // [row][col] - player index who drew the line or null
     boxes: [], // [row][col] - owner index or null
     gameOver: false,
     winner: null,
@@ -88,8 +88,8 @@ const KaesekaestchenGame = {
             this.boxes[row] = [];
 
             for (let col = 0; col <= this.gridSize; col++) {
-                this.horizontalLines[row][col] = false;
-                this.verticalLines[row][col] = false;
+                this.horizontalLines[row][col] = null;
+                this.verticalLines[row][col] = null;
                 if (row < this.gridSize && col < this.gridSize) {
                     this.boxes[row][col] = null;
                 }
@@ -167,13 +167,13 @@ const KaesekaestchenGame = {
                 line.setAttribute('y1', y);
                 line.setAttribute('x2', x2);
                 line.setAttribute('y2', y);
-                line.setAttribute('stroke', this.horizontalLines[row][col] ? this.players[this.currentPlayerIndex].color : '#ccc');
+                line.setAttribute('stroke', this.horizontalLines[row][col] !== null ? this.players[this.horizontalLines[row][col]].color : '#ccc');
                 line.setAttribute('stroke-width', lineThickness);
                 line.setAttribute('stroke-linecap', 'round');
                 line.classList.add('kaese-line');
-                line.style.cursor = this.horizontalLines[row][col] || this.gameOver ? 'default' : 'pointer';
+                line.style.cursor = this.horizontalLines[row][col] !== null || this.gameOver ? 'default' : 'pointer';
 
-                if (!this.horizontalLines[row][col] && !this.gameOver) {
+                if (this.horizontalLines[row][col] === null && !this.gameOver) {
                     line.addEventListener('click', () => this.handleLineClick('horizontal', row, col));
                     line.addEventListener('mouseenter', (e) => {
                         if (!this.gameOver) {
@@ -182,7 +182,7 @@ const KaesekaestchenGame = {
                         }
                     });
                     line.addEventListener('mouseleave', (e) => {
-                        if (!this.horizontalLines[row][col]) {
+                        if (this.horizontalLines[row][col] === null) {
                             e.target.setAttribute('stroke', '#ccc');
                             e.target.setAttribute('opacity', '1');
                         }
@@ -205,13 +205,13 @@ const KaesekaestchenGame = {
                 line.setAttribute('y1', y1);
                 line.setAttribute('x2', x);
                 line.setAttribute('y2', y2);
-                line.setAttribute('stroke', this.verticalLines[row][col] ? this.players[this.currentPlayerIndex].color : '#ccc');
+                line.setAttribute('stroke', this.verticalLines[row][col] !== null ? this.players[this.verticalLines[row][col]].color : '#ccc');
                 line.setAttribute('stroke-width', lineThickness);
                 line.setAttribute('stroke-linecap', 'round');
                 line.classList.add('kaese-line');
-                line.style.cursor = this.verticalLines[row][col] || this.gameOver ? 'default' : 'pointer';
+                line.style.cursor = this.verticalLines[row][col] !== null || this.gameOver ? 'default' : 'pointer';
 
-                if (!this.verticalLines[row][col] && !this.gameOver) {
+                if (this.verticalLines[row][col] === null && !this.gameOver) {
                     line.addEventListener('click', () => this.handleLineClick('vertical', row, col));
                     line.addEventListener('mouseenter', (e) => {
                         if (!this.gameOver) {
@@ -220,7 +220,7 @@ const KaesekaestchenGame = {
                         }
                     });
                     line.addEventListener('mouseleave', (e) => {
-                        if (!this.verticalLines[row][col]) {
+                        if (this.verticalLines[row][col] === null) {
                             e.target.setAttribute('stroke', '#ccc');
                             e.target.setAttribute('opacity', '1');
                         }
@@ -260,14 +260,14 @@ const KaesekaestchenGame = {
         if (this.gameOver) return;
 
         // Check if line is already drawn
-        if (direction === 'horizontal' && this.horizontalLines[row][col]) return;
-        if (direction === 'vertical' && this.verticalLines[row][col]) return;
+        if (direction === 'horizontal' && this.horizontalLines[row][col] !== null) return;
+        if (direction === 'vertical' && this.verticalLines[row][col] !== null) return;
 
-        // Draw the line
+        // Draw the line and record who drew it
         if (direction === 'horizontal') {
-            this.horizontalLines[row][col] = true;
+            this.horizontalLines[row][col] = this.currentPlayerIndex;
         } else {
-            this.verticalLines[row][col] = true;
+            this.verticalLines[row][col] = this.currentPlayerIndex;
         }
 
         // Check if any boxes were completed
@@ -342,10 +342,10 @@ const KaesekaestchenGame = {
      * @returns {boolean}
      */
     isBoxComplete(row, col) {
-        return this.horizontalLines[row][col] &&
-               this.horizontalLines[row + 1][col] &&
-               this.verticalLines[row][col] &&
-               this.verticalLines[row][col + 1];
+        return this.horizontalLines[row][col] !== null &&
+               this.horizontalLines[row + 1][col] !== null &&
+               this.verticalLines[row][col] !== null &&
+               this.verticalLines[row][col + 1] !== null;
     },
 
     /**
