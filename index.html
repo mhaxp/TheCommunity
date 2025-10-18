@@ -9,6 +9,37 @@
 </head>
 <body>
     <header>
+        <div class="cat-container">
+            <svg class="cat-image" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="120" height="120">
+                <!-- Cat face -->
+                <ellipse cx="100" cy="100" rx="60" ry="50" fill="#FF9933"/>
+                <!-- Left ear -->
+                <polygon points="60,60 50,20 80,50" fill="#FF9933"/>
+                <polygon points="62,55 56,30 75,50" fill="#FFB366"/>
+                <!-- Right ear -->
+                <polygon points="140,60 150,20 120,50" fill="#FF9933"/>
+                <polygon points="138,55 144,30 125,50" fill="#FFB366"/>
+                <!-- Left eye -->
+                <ellipse cx="80" cy="90" rx="8" ry="12" fill="#000"/>
+                <ellipse cx="82" cy="88" rx="3" ry="4" fill="#FFF"/>
+                <!-- Right eye -->
+                <ellipse cx="120" cy="90" rx="8" ry="12" fill="#000"/>
+                <ellipse cx="122" cy="88" rx="3" ry="4" fill="#FFF"/>
+                <!-- Nose -->
+                <polygon points="100,105 95,110 105,110" fill="#FF6666"/>
+                <!-- Mouth -->
+                <path d="M 100,110 Q 90,120 85,115" stroke="#000" stroke-width="2" fill="none"/>
+                <path d="M 100,110 Q 110,120 115,115" stroke="#000" stroke-width="2" fill="none"/>
+                <!-- Whiskers left -->
+                <line x1="60" y1="100" x2="30" y2="95" stroke="#000" stroke-width="1.5"/>
+                <line x1="60" y1="105" x2="30" y2="105" stroke="#000" stroke-width="1.5"/>
+                <line x1="60" y1="110" x2="30" y2="115" stroke="#000" stroke-width="1.5"/>
+                <!-- Whiskers right -->
+                <line x1="140" y1="100" x2="170" y2="95" stroke="#000" stroke-width="1.5"/>
+                <line x1="140" y1="105" x2="170" y2="105" stroke="#000" stroke-width="1.5"/>
+                <line x1="140" y1="110" x2="170" y2="115" stroke="#000" stroke-width="1.5"/>
+            </svg>
+        </div>
         <h1>TheCommunity</h1>
         <p class="subtitle">Peer-to-peer communication powered by WebRTC</p>
     </header>
