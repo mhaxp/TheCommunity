@@ -9,7 +9,7 @@
 
 const KaesekaestchenGame = {
     // Game configuration
-    gridSize: 8, // 8x8 boxes = 9x9 dots
+    gridSize: 2, // 8x8 boxes = 9x9 dots
     players: [
         { name: 'Leo', color: '#00ff00', colorName: 'green' },
         { name: 'Flo', color: '#ff69b4', colorName: 'pink' }
